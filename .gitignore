@@ -1,0 +1,70 @@
+# ─────────────────────────────────────────
+# SECRETS — NEVER COMMIT THESE
+# ─────────────────────────────────────────
+.env
+*.env
+.env.local
+.env.*.local
+
+# ─────────────────────────────────────────
+# PYTHON
+# ─────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+.eggs/
+.Python
+env/
+venv/
+.venv/
+ENV/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.whl
+MANIFEST
+
+# ─────────────────────────────────────────
+# TESTING & COVERAGE
+# ─────────────────────────────────────────
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+*.coveragerc
+.tox/
+nosetests.xml
+
+# ─────────────────────────────────────────
+# IDE & EDITOR
+# ─────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─────────────────────────────────────────
+# DOCKER
+# ─────────────────────────────────────────
+.dockerignore
+
+# ─────────────────────────────────────────
+# LOGS & TEMP
+# ─────────────────────────────────────────
+*.log
+*.tmp
+tmp/
+temp/

@@ -1,0 +1,735 @@
+{
+  "task": "task1_detection",
+  "seed": 42,
+  "origin_node_id": "node_19",
+  "initial_infected": [
+    "node_4",
+    "node_5",
+    "node_6",
+    "node_7",
+    "node_8",
+    "node_9",
+    "node_12",
+    "node_13",
+    "node_14",
+    "node_15",
+    "node_16",
+    "node_17",
+    "node_18",
+    "node_19"
+  ],
+  "network_size": 20,
+  "infection_threshold": 0.8,
+  "spread_steps_before_episode": 3,
+  "initial_snapshot": {
+    "step": 3,
+    "nodes": {
+      "node_0": {
+        "node_id": "node_0",
+        "status": "clean",
+        "influence_score": 0.61,
+        "infected_at_step": null,
+        "flagged": false,
+        "neighbors": [
+          "node_15",
+          "node_12",
+          "node_6"
+        ],
+        "metadata": {
+          "username": "user_0",
+          "followers": 419,
+          "account_age_days": 3038
+        }
+      },
+      "node_1": {
+        "node_id": "node_1",
+        "status": "clean",
+        "influence_score": 0.32,
+        "infected_at_step": null,
+        "flagged": false,
+        "neighbors": [
+          "node_6",
+          "node_3",
+          "node_13",
+          "node_16",
+          "node_17"
+        ],
+        "metadata": {
+          "username": "user_1",
+          "followers": 3667,
+          "account_age_days": 572
+        }
+      },
+      "node_2": {
+        "node_id": "node_2",
+        "status": "clean",
+        "influence_score": 0.69,
+        "infected_at_step": null,
+        "flagged": false,
+        "neighbors": [
+          "node_6",
+          "node_15",
+          "node_7",
+          "node_11",
+          "node_14",
+          "node_19"
+        ],
+        "metadata": {
+          "username": "user_2",
+          "followers": 8945,
+          "account_age_days": 357
+        }
+      },
+      "node_3": {
+        "node_id": "node_3",
+        "status": "clean",
+        "influence_score": 0.57,
+        "infected_at_step": null,
+        "flagged": false,
+        "neighbors": [
+          "node_8",
+          "node_11",
+          "node_1",
+          "node_19",
+          "node_14",
+          "node_9",
+          "node_16"
+        ],
+        "metadata": {
+          "username": "user_3",
+          "followers": 530,
+          "account_age_days": 123
+        }
+      },
+      "node_4": {
+        "node_id": "node_4",
+        "status": "infected",
+        "influence_score": 0.17,
+        "infected_at_step": 0,
+        "flagged": false,
+        "neighbors": [
+          "node_7",
+          "node_16",
+          "node_13",
+          "node_12",
+          "node_19"
+        ],
+        "metadata": {
+          "username": "user_4",
+          "followers": 3821,
+          "account_age_days": 2070
+        }
+      },
+      "node_5": {
+        "node_id": "node_5",
+        "status": "infected",
+        "influence_score": 0.58,
+        "infected_at_step": 0,
+        "flagged": false,
+        "neighbors": [
+          "node_8",
+          "node_18",
+          "node_6",
+          "node_10",
+          "node_14",
+          "node_19"
+        ],
+        "metadata": {
+          "username": "user_5",
+          "followers": 9205,
+          "account_age_days": 815
+        }
+      },
+      "node_6": {
+        "node_id": "node_6",
+        "status": "infected",
+        "influence_score": 0.67,
+        "infected_at_step": 2,
+        "flagged": false,
+        "neighbors": [
+          "node_0",
+          "node_1",
+          "node_2",
+          "node_16",
+          "node_9",
+          "node_7",
+          "node_5",
+          "node_11",
+          "node_15"
+        ],
+        "metadata": {
+          "username": "user_6",
+          "followers": 8938,
+          "account_age_days": 1719
+        }
+      },
+      "node_7": {
+        "node_id": "node_7",
+        "status": "infected",
+        "influence_score": 0.28,
+        "infected_at_step": 1,
+        "flagged": false,
+        "neighbors": [
+          "node_4",
+          "node_6",
+          "node_16",
+          "node_2",
+          "node_11"
+        ],
+        "metadata": {
+          "username": "user_7",
+          "followers": 9664,
+          "account_age_days": 1140
+        }
+      },
+      "node_8": {
+        "node_id": "node_8",
+        "status": "infected",
+        "influence_score": 0.75,
+        "infected_at_step": 0,
+        "flagged": false,
+        "neighbors": [
+          "node_3",
+          "node_5",
+          "node_19",
+          "node_11",
+          "node_18",
+          "node_16",
+          "node_13",
+          "node_15"
+        ],
+        "metadata": {
+          "username": "user_8",
+          "followers": 116,
+          "account_age_days": 3109
+        }
+      },
+      "node_9": {
+        "node_id": "node_9",
+        "status": "infected",
+        "influence_score": 0.74,
+        "infected_at_step": 0,
+        "flagged": false,
+        "neighbors": [
+          "node_6",
+          "node_12",
+          "node_3",
+          "node_11",
+          "node_19"
+        ],
+        "metadata": {
+          "username": "user_9",
+          "followers": 6934,
+          "account_age_days": 1394
+        }
+      },
+      "node_10": {
+        "node_id": "node_10",
+        "status": "clean",
+        "influence_score": 0.32,
+        "infected_at_step": null,
+        "flagged": false,
+        "neighbors": [
+          "node_17",
+          "node_5",
+          "node_19"
+        ],
+        "metadata": {
+          "username": "user_10",
+          "followers": 3537,
+          "account_age_days": 3128
+        }
+      },
+      "node_11": {
+        "node_id": "node_11",
+        "status": "clean",
+        "influence_score": 0.37,
+        "infected_at_step": null,
+        "flagged": false,
+        "neighbors": [
+          "node_3",
+          "node_8",
+          "node_9",
+          "node_7",
+          "node_2",
+          "node_6",
+          "node_16",
+          "node_18",
+          "node_14"
+        ],
+        "metadata": {
+          "username": "user_11",
+          "followers": 1529,
+          "account_age_days": 1557
+        }
+      },
+      "node_12": {
+        "node_id": "node_12",
+        "status": "infected",
+        "influence_score": 0.18,
+        "infected_at_step": 2,
+        "flagged": false,
+        "neighbors": [
+          "node_0",
+          "node_9",
+          "node_4"
+        ],
+        "metadata": {
+          "username": "user_12",
+          "followers": 5645,
+          "account_age_days": 2473
+        }
+      },
+      "node_13": {
+        "node_id": "node_13",
+        "status": "infected",
+        "influence_score": 0.31,
+        "infected_at_step": 2,
+        "flagged": false,
+        "neighbors": [
+          "node_4",
+          "node_8",
+          "node_1",
+          "node_19",
+          "node_15"
+        ],
+        "metadata": {
+          "username": "user_13",
+          "followers": 721,
+          "account_age_days": 2989
+        }
+      },
+      "node_14": {
+        "node_id": "node_14",
+        "status": "infected",
+        "influence_score": 0.47,
+        "infected_at_step": 1,
+        "flagged": false,
+        "neighbors": [
+          "node_3",
+          "node_2",
+          "node_5",
+          "node_18",
+          "node_11"
+        ],
+        "metadata": {
+          "username": "user_14",
+          "followers": 2055,
+          "account_age_days": 1551
+        }
+      },
+      "node_15": {
+        "node_id": "node_15",
+        "status": "infected",
+        "influence_score": 0.16,
+        "infected_at_step": 1,
+        "flagged": false,
+        "neighbors": [
+          "node_0",
+          "node_2",
+          "node_8",
+          "node_19",
+          "node_13",
+          "node_6"
+        ],
+        "metadata": {
+          "username": "user_15",
+          "followers": 4813,
+          "account_age_days": 3398
+        }
+      },
+      "node_16": {
+        "node_id": "node_16",
+        "status": "infected",
+        "influence_score": 0.6,
+        "infected_at_step": 1,
+        "flagged": false,
+        "neighbors": [
+          "node_4",
+          "node_6",
+          "node_7",
+          "node_8",
+          "node_11",
+          "node_1",
+          "node_3",
+          "node_18",
+          "node_19"
+        ],
+        "metadata": {
+          "username": "user_16",
+          "followers": 5935,
+          "account_age_days": 2365
+        }
+      },
+      "node_17": {
+        "node_id": "node_17",
+        "status": "infected",
+        "influence_score": 0.25,
+        "infected_at_step": 1,
+        "flagged": false,
+        "neighbors": [
+          "node_10",
+          "node_1",
+          "node_19"
+        ],
+        "metadata": {
+          "username": "user_17",
+          "followers": 1149,
+          "account_age_days": 188
+        }
+      },
+      "node_18": {
+        "node_id": "node_18",
+        "status": "infected",
+        "influence_score": 0.63,
+        "infected_at_step": 1,
+        "flagged": false,
+        "neighbors": [
+          "node_5",
+          "node_8",
+          "node_11",
+          "node_14",
+          "node_16",
+          "node_19"
+        ],
+        "metadata": {
+          "username": "user_18",
+          "followers": 4751,
+          "account_age_days": 327
+        }
+      },
+      "node_19": {
+        "node_id": "node_19",
+        "status": "infected",
+        "influence_score": 0.78,
+        "infected_at_step": 0,
+        "flagged": false,
+        "neighbors": [
+          "node_3",
+          "node_8",
+          "node_10",
+          "node_13",
+          "node_15",
+          "node_16",
+          "node_18",
+          "node_4",
+          "node_5",
+          "node_9",
+          "node_17",
+          "node_2"
+        ],
+        "metadata": {
+          "username": "user_19",
+          "followers": 1664,
+          "account_age_days": 1557
+        }
+      }
+    },
+    "edges": [
+      {
+        "source": "node_0",
+        "target": "node_15",
+        "weight": 0.36
+      },
+      {
+        "source": "node_0",
+        "target": "node_12",
+        "weight": 0.25
+      },
+      {
+        "source": "node_0",
+        "target": "node_6",
+        "weight": 0.29
+      },
+      {
+        "source": "node_1",
+        "target": "node_6",
+        "weight": 0.47
+      },
+      {
+        "source": "node_2",
+        "target": "node_6",
+        "weight": 0.37
+      },
+      {
+        "source": "node_2",
+        "target": "node_15",
+        "weight": 0.79
+      },
+      {
+        "source": "node_3",
+        "target": "node_8",
+        "weight": 0.12
+      },
+      {
+        "source": "node_3",
+        "target": "node_11",
+        "weight": 0.32
+      },
+      {
+        "source": "node_3",
+        "target": "node_1",
+        "weight": 0.29
+      },
+      {
+        "source": "node_3",
+        "target": "node_19",
+        "weight": 0.25
+      },
+      {
+        "source": "node_3",
+        "target": "node_14",
+        "weight": 0.76
+      },
+      {
+        "source": "node_4",
+        "target": "node_7",
+        "weight": 0.72
+      },
+      {
+        "source": "node_4",
+        "target": "node_16",
+        "weight": 0.55
+      },
+      {
+        "source": "node_4",
+        "target": "node_13",
+        "weight": 0.2
+      },
+      {
+        "source": "node_5",
+        "target": "node_8",
+        "weight": 0.48
+      },
+      {
+        "source": "node_5",
+        "target": "node_18",
+        "weight": 0.62
+      },
+      {
+        "source": "node_6",
+        "target": "node_16",
+        "weight": 0.46
+      },
+      {
+        "source": "node_6",
+        "target": "node_9",
+        "weight": 0.16
+      },
+      {
+        "source": "node_6",
+        "target": "node_7",
+        "weight": 0.13
+      },
+      {
+        "source": "node_6",
+        "target": "node_5",
+        "weight": 0.18
+      },
+      {
+        "source": "node_7",
+        "target": "node_16",
+        "weight": 0.37
+      },
+      {
+        "source": "node_7",
+        "target": "node_2",
+        "weight": 0.52
+      },
+      {
+        "source": "node_8",
+        "target": "node_19",
+        "weight": 0.76
+      },
+      {
+        "source": "node_8",
+        "target": "node_11",
+        "weight": 0.58
+      },
+      {
+        "source": "node_8",
+        "target": "node_18",
+        "weight": 0.18
+      },
+      {
+        "source": "node_8",
+        "target": "node_16",
+        "weight": 0.72
+      },
+      {
+        "source": "node_9",
+        "target": "node_12",
+        "weight": 0.4
+      },
+      {
+        "source": "node_9",
+        "target": "node_3",
+        "weight": 0.42
+      },
+      {
+        "source": "node_9",
+        "target": "node_11",
+        "weight": 0.77
+      },
+      {
+        "source": "node_10",
+        "target": "node_17",
+        "weight": 0.74
+      },
+      {
+        "source": "node_10",
+        "target": "node_5",
+        "weight": 0.71
+      },
+      {
+        "source": "node_10",
+        "target": "node_19",
+        "weight": 0.31
+      },
+      {
+        "source": "node_11",
+        "target": "node_7",
+        "weight": 0.48
+      },
+      {
+        "source": "node_11",
+        "target": "node_2",
+        "weight": 0.65
+      },
+      {
+        "source": "node_11",
+        "target": "node_6",
+        "weight": 0.47
+      },
+      {
+        "source": "node_11",
+        "target": "node_16",
+        "weight": 0.1
+      },
+      {
+        "source": "node_11",
+        "target": "node_18",
+        "weight": 0.33
+      },
+      {
+        "source": "node_12",
+        "target": "node_4",
+        "weight": 0.75
+      },
+      {
+        "source": "node_13",
+        "target": "node_8",
+        "weight": 0.71
+      },
+      {
+        "source": "node_13",
+        "target": "node_1",
+        "weight": 0.76
+      },
+      {
+        "source": "node_13",
+        "target": "node_19",
+        "weight": 0.16
+      },
+      {
+        "source": "node_14",
+        "target": "node_2",
+        "weight": 0.43
+      },
+      {
+        "source": "node_14",
+        "target": "node_5",
+        "weight": 0.48
+      },
+      {
+        "source": "node_14",
+        "target": "node_18",
+        "weight": 0.29
+      },
+      {
+        "source": "node_14",
+        "target": "node_11",
+        "weight": 0.71
+      },
+      {
+        "source": "node_15",
+        "target": "node_8",
+        "weight": 0.38
+      },
+      {
+        "source": "node_15",
+        "target": "node_19",
+        "weight": 0.57
+      },
+      {
+        "source": "node_15",
+        "target": "node_13",
+        "weight": 0.36
+      },
+      {
+        "source": "node_15",
+        "target": "node_6",
+        "weight": 0.73
+      },
+      {
+        "source": "node_16",
+        "target": "node_1",
+        "weight": 0.34
+      },
+      {
+        "source": "node_16",
+        "target": "node_3",
+        "weight": 0.51
+      },
+      {
+        "source": "node_16",
+        "target": "node_18",
+        "weight": 0.26
+      },
+      {
+        "source": "node_16",
+        "target": "node_19",
+        "weight": 0.25
+      },
+      {
+        "source": "node_17",
+        "target": "node_1",
+        "weight": 0.26
+      },
+      {
+        "source": "node_18",
+        "target": "node_19",
+        "weight": 0.33
+      },
+      {
+        "source": "node_19",
+        "target": "node_4",
+        "weight": 0.61
+      },
+      {
+        "source": "node_19",
+        "target": "node_5",
+        "weight": 0.72
+      },
+      {
+        "source": "node_19",
+        "target": "node_9",
+        "weight": 0.5
+      },
+      {
+        "source": "node_19",
+        "target": "node_17",
+        "weight": 0.27
+      },
+      {
+        "source": "node_19",
+        "target": "node_2",
+        "weight": 0.43
+      }
+    ],
+    "total_infected": 14,
+    "total_quarantined": 0,
+    "infection_threshold": 0.8,
+    "origin_node_id": null
+  }
+}

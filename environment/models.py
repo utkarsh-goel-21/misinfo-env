@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional
+from typing import Optional, Any
 from enum import Enum
 
 
@@ -110,7 +110,7 @@ class Reward(BaseModel):
     )
     done: bool
     success: bool
-    partial_credits: dict[str, float] = Field(
+    partial_credits: dict[str, Any] = Field(
         description="Breakdown of what contributed to score"
     )
     penalty: float = Field(
