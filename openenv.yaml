@@ -1,0 +1,283 @@
+# ─────────────────────────────────────────
+# OpenEnv Specification File
+# ─────────────────────────────────────────
+
+name: misinfo-containment-env
+version: 1.0.0
+description: >
+  A simulated social network where misinformation spreads
+  node to node every step. An AI agent must detect infected
+  nodes, trace the origin, and contain the spread before
+  it crosses a danger threshold. Three tasks of increasing
+  difficulty test detection, investigation, and containment
+  skills.
+
+author: your-name
+license: MIT
+tags:
+  - openenv
+  - misinformation
+  - social-network
+  - containment
+  - graph
+  - real-world
+
+# ─────────────────────────────────────────
+# ENVIRONMENT INTERFACE
+# ─────────────────────────────────────────
+
+interface:
+  reset:
+    description: >
+      Resets environment to clean initial state.
+      Builds graph, runs pre-spread, returns
+      initial Observation.
+    returns: Observation
+
+  step:
+    description: >
+      Executes one agent action. Returns updated
+      Observation, Reward, done flag, and info dict.
+    input: Action
+    returns:
+      - Observation
+      - Reward
+      - bool
+      - dict
+
+  state:
+    description: >
+      Returns full internal environment state
+      including ground truth hidden from agent.
+    returns: EnvironmentState
+
+# ─────────────────────────────────────────
+# OBSERVATION SPACE
+# ─────────────────────────────────────────
+
+observation_space:
+  task_id:
+    type: string
+    enum:
+      - task1_detection
+      - task2_tracing
+      - task3_containment
+    description: Currently active task
+
+  step_number:
+    type: integer
+    description: Current step in episode
+
+  max_steps:
+    type: integer
+    description: Maximum steps allowed in this task
+
+  actions_remaining:
+    type: integer
+    nullable: true
+    description: Actions left this step (task3 only)
+
+  network:
+    type: object
+    description: Current network snapshot
+    fields:
+      step:
+        type: integer
+      nodes:
+        type: dict
+        description: >
+          Map of node_id to Node object.
+          Each node has status, influence_score,
+          infected_at_step, neighbors, metadata.
+      edges:
+        type: list
+        description: List of Edge objects with source, target, weight
+      total_infected:
+        type: integer
+      total_quarantined:
+        type: integer
+      infection_threshold:
+        type: float
+        range: [0.0, 1.0]
+      origin_node_id:
+        type: string
+        nullable: true
+        description: Hidden from agent during task2 and task3
+
+  recently_infected:
+    type: list
+    items: string
+    description: Node IDs infected in the most recent spread step
+
+  agent_message:
+    type: string
+    description: Human readable situation summary
+
+# ─────────────────────────────────────────
+# ACTION SPACE
+# ─────────────────────────────────────────
+
+action_space:
+  action_type:
+    type: string
+    enum:
+      - inspect
+      - trace
+      - flag
+      - quarantine
+      - remove
+      - restore
+    descriptions:
+      inspect: Get full details about a specific node
+      trace: >
+        Investigate infection path of node,
+        get timing clues about origin
+      flag: >
+        Mark node as suspicious. Reduces spread
+        by 50%. In task2 submits origin guess.
+        In task3 with reasoning=origin submits guess.
+      quarantine: >
+        Isolate node completely. Stops all spread.
+        Penalized if applied to clean node.
+      remove: >
+        Permanently remove node from network.
+        Penalized if applied to clean node.
+      restore: Restore wrongly quarantined clean node
+
+  target_node_id:
+    type: string
+    description: ID of node to act upon e.g. node_0
+
+  reasoning:
+    type: string
+    nullable: true
+    description: >
+      Optional agent explanation of why it
+      is taking this action. Used in task3
+      to submit origin guess via flag action.
+
+  task_restrictions:
+    task1_detection:
+      allowed: [inspect, flag]
+    task2_tracing:
+      allowed: [inspect, trace, flag]
+    task3_containment:
+      allowed: [inspect, trace, flag, quarantine, remove, restore]
+      budget: 3 actions per spread step
+
+# ─────────────────────────────────────────
+# REWARD SPACE
+# ─────────────────────────────────────────
+
+reward_space:
+  score:
+    type: float
+    range: [0.0, 1.0]
+    description: Final episode score
+
+  delta:
+    type: float
+    description: Change in score from previous step
+
+  done:
+    type: boolean
+    description: Whether episode is complete
+
+  success:
+    type: boolean
+    description: Whether task success criteria were met
+
+  partial_credits:
+    type: dict
+    description: Breakdown of score components
+
+  penalty:
+    type: float
+    description: Penalties incurred this step
+
+  feedback:
+    type: string
+    description: Human readable reward explanation
+
+# ─────────────────────────────────────────
+# TASKS
+# ─────────────────────────────────────────
+
+tasks:
+  - id: task1_detection
+    name: Misinformation Detection
+    difficulty: easy
+    max_steps: 10
+    network_size: 20
+    description: >
+      Misinformation has already spread for 3 steps.
+      Spread is frozen. Agent must inspect nodes and
+      correctly flag all infected ones within 10 steps.
+    success_criteria: >
+      True positive rate >= 0.80 AND
+      false positive rate <= 0.10
+    scoring:
+      true_positive_rate: 0.60
+      false_positive_penalty: 0.40
+
+  - id: task2_tracing
+    name: Origin Tracing
+    difficulty: medium
+    max_steps: 15
+    network_size: 40
+    description: >
+      Misinformation is actively spreading. Agent must
+      use inspect and trace actions to identify the
+      exact origin node before threshold is breached.
+    success_criteria: >
+      Exact origin node identified AND
+      infection threshold not breached
+    scoring:
+      exact_origin: 0.60
+      neighbor_origin: 0.30
+      efficiency_bonus: 0.10
+      breach_penalty: -0.20
+
+  - id: task3_containment
+    name: Full Containment
+    difficulty: hard
+    max_steps: 20
+    network_size: 80
+    actions_per_step: 3
+    description: >
+      Large network under active attack. Agent has
+      3 actions per step. Must keep infection below
+      threshold for all 20 steps AND correctly
+      identify origin node.
+    success_criteria: >
+      Infection below threshold all 20 steps AND
+      exact origin identified
+    scoring:
+      containment: 0.40
+      origin_accuracy: 0.25
+      precision: 0.20
+      final_rate_bonus: 0.15
+    penalties:
+      wrong_quarantine: -0.05
+      wrong_removal: -0.10
+
+# ─────────────────────────────────────────
+# RUNTIME
+# ─────────────────────────────────────────
+
+runtime:
+  python: "3.11"
+  max_episode_steps: 20
+  inference_timeout_minutes: 20
+  hardware:
+    vcpu: 2
+    memory_gb: 8
+
+# ─────────────────────────────────────────
+# DEPLOYMENT
+# ─────────────────────────────────────────
+
+deployment:
+  platform: huggingface-spaces
+  sdk: docker
+  port: 7860
