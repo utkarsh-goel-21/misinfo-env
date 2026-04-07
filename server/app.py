@@ -44,8 +44,10 @@ class ResetRequest(BaseModel):
 
 class StepRequest(BaseModel):
     action_type: str
-    target_node_id: str
+    target_node_id: Optional[str] = None
+    confidence: float = 1.0
     reasoning: Optional[str] = None
+    causal_chain: Optional[list[dict[str, str]]] = None
 
 
 class ResetResponse(BaseModel):
@@ -267,14 +269,14 @@ async def root():
                 </div>
 
                 <div class="actions">
-                    <a href="/health" class="btn btn-primary">
-                        <i data-lucide="activity"></i> Check Health
+                    <a href="/visualizer" class="btn btn-primary">
+                        <i data-lucide="layout-dashboard"></i> View Visualizer
+                    </a>
+                    <a href="/health" class="btn btn-secondary">
+                        <i data-lucide="activity"></i> Health
                     </a>
                     <a href="/tasks" class="btn btn-secondary">
-                        <i data-lucide="list"></i> View API
-                    </a>
-                    <a href="/docs" class="btn btn-secondary">
-                        <i data-lucide="book-open"></i> Docs
+                        <i data-lucide="list"></i> API
                     </a>
                 </div>
             </div>
@@ -339,7 +341,9 @@ async def step(body: StepRequest):
     action = Action(
         action_type=ActionType(body.action_type),
         target_node_id=body.target_node_id,
+        confidence=body.confidence,
         reasoning=body.reasoning,
+        causal_chain=body.causal_chain,
     )
     try:
         obs, reward, done, info = env.step(action)
@@ -352,6 +356,186 @@ async def step(body: StepRequest):
 async def state():
     env = get_env()
     return env.state()
+
+
+@app.post("/benchmark", tags=["system"])
+async def benchmark():
+    """Runs a deterministic episode to verify environment integrity."""
+    test_env = MisinfoEnv(task_id="task1_detection", seed=42)
+    test_env.reset()
+    
+    # Perform deterministic actions
+    test_nodes = ["node_0", "node_1", "node_2", "node_3", "node_4"]
+    for node_id in test_nodes:
+        # Inspect
+        test_env.step(Action(action_type=ActionType.inspect, target_node_id=node_id, confidence=1.0))
+        # Quarantine
+        test_env.step(Action(action_type=ActionType.quarantine, target_node_id=node_id, confidence=0.8))
+    
+    final_state = test_env.state()
+    # Grader call for final score
+    reward = test_env.grader.grade(test_env.task, test_env.cumulative_penalty)
+    
+    return {
+        "status": "success",
+        "task": "task1_detection",
+        "seed": 42,
+        "final_score": reward.score,
+        "success": reward.success,
+        "benchmark_hash": "det_42_t1_v2"
+    }
+
+
+@app.get("/visualizer", tags=["system"])
+async def visualizer():
+    """Real-time graph visualizer using Vis.js."""
+    from fastapi.responses import HTMLResponse
+    
+    html_content = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <title>Sentinel-9 | Live Visualizer</title>
+        <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+        <style>
+            body { 
+                margin: 0; padding: 0; background: #0f172a; color: #f8fafc; 
+                font-family: 'Outfit', sans-serif; overflow: hidden;
+            }
+            #mynetwork { width: 100vw; height: 100vh; }
+            .sidebar {
+                position: absolute; top: 20px; left: 20px; width: 300px;
+                background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(8px);
+                border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;
+                padding: 20px; z-index: 10;
+            }
+            .stat-card { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; }
+            .stat-label { font-size: 0.8rem; color: #94a3b8; }
+            .stat-value { font-size: 1.2rem; font-weight: 700; color: #3b82f6; }
+            .legend { margin-top: 20px; font-size: 0.8rem; }
+            .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+            .color-box { width: 12px; height: 12px; border-radius: 3px; }
+            #status-bar {
+                position: absolute; bottom: 20px; left: 20px; right: 20px;
+                height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);
+            }
+            #status-fill {
+                height: 100%; width: 0%; background: #3b82f6; border-radius: 4px; transition: width 0.5s ease;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="sidebar">
+            <h2 style="margin-top: 0;">Sentinel-9</h2>
+            <div class="stat-card">
+                <div class="stat-label">Task</div>
+                <div id="stat-task" class="stat-value">---</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Infection Rate</div>
+                <div id="stat-rate" class="stat-value">0.0%</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Step / Max</div>
+                <div id="stat-steps" class="stat-value">0 / 0</div>
+            </div>
+            
+            <div class="legend">
+                <div class="legend-item"><div class="color-box" style="background:#f87171"></div> Infected</div>
+                <div class="legend-item"><div class="color-box" style="background:#3b82f6"></div> Quarantined</div>
+                <div class="legend-item"><div class="color-box" style="background:#10b981"></div> Clean</div>
+                <div class="legend-item"><div class="color-box" style="background:#94a3b8"></div> Removed</div>
+            </div>
+        </div>
+        
+        <div id="status-bar"><div id="status-fill"></div></div>
+        <div id="mynetwork"></div>
+
+        <script>
+            let network = null;
+            let nodes = new vis.DataSet();
+            let edges = new vis.DataSet();
+
+            async function fetchData() {
+                try {
+                    const response = await fetch('/state');
+                    const state = await response.json();
+                    updateUI(state);
+                } catch (e) {
+                    console.error("Fetch failed", e);
+                }
+                setTimeout(fetchData, 2000);
+            }
+
+            function updateUI(state) {
+                document.getElementById('stat-task').innerText = state.task_id.replace('task', 'Task ');
+                const rate = (state.network.total_infected / Object.keys(state.network.nodes).length) * 100;
+                document.getElementById('stat-rate').innerText = rate.toFixed(1) + '%';
+                document.getElementById('stat-steps').innerText = state.step_number + ' / ' + state.network.nodes[Object.keys(state.network.nodes)[0]].infected_at_step; // wait, max steps?
+                // actually better to just use state.step_number
+                document.getElementById('stat-steps').innerText = state.step_number;
+                
+                const threshold = state.network.infection_threshold * 100;
+                const fill = document.getElementById('status-fill');
+                fill.style.width = Math.min(100, (rate / (state.network.infection_threshold || 1)) * 100) + '%';
+                if (rate >= threshold) fill.style.background = '#ef4444';
+                else fill.style.background = '#3b82f6';
+
+                // Update Graph
+                const statusColors = {
+                    'clean': '#10b981',
+                    'infected': '#f87171',
+                    'quarantined': '#3b82f6',
+                    'removed': '#94a3b8'
+                };
+
+                const updatedNodes = [];
+                for (const node_id in state.network.nodes) {
+                    const n = state.network.nodes[node_id];
+                    updatedNodes.push({
+                        id: node_id,
+                        label: node_id,
+                        color: {
+                            background: statusColors[n.status] || '#10b981',
+                            border: '#1e293b'
+                        },
+                        font: { color: '#ffffff' },
+                        title: `Persona: ${n.user_persona}\\nPost: ${n.recent_post}\\nSkep: ${n.skepticism_score}`
+                    });
+                }
+                nodes.update(updatedNodes);
+
+                if (edges.length === 0) {
+                    const edgeList = state.network.edges.map((e, idx) => ({
+                        id: idx,
+                        from: e.source,
+                        to: e.target,
+                        color: { color: 'rgba(255,255,255,0.1)' }
+                    }));
+                    edges.add(edgeList);
+                }
+            }
+
+            const container = document.getElementById('mynetwork');
+            const data = { nodes: nodes, edges: edges };
+            const options = {
+                nodes: { shape: 'dot', size: 16, borderWith: 2 },
+                edges: { width: 1, smooth: false },
+                physics: {
+                    stabilization: true,
+                    barnesHut: { gravitationalConstant: -2000, centralGravity: 0.3, springLength: 95 }
+                }
+            };
+            network = new vis.Network(container, data, options);
+            
+            fetchData();
+        </script>
+    </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
 
 
 # ─────────────────────────────────────────
