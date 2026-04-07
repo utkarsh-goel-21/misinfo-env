@@ -127,6 +127,50 @@ app.add_middleware(
 # ENDPOINTS
 # ─────────────────────────────────────────
 
+@app.get("/", tags=["system"])
+async def root():
+    """Professional landing page for the environment."""
+    from fastapi.responses import HTMLResponse
+    
+    html_content = """
+    <html>
+        <head>
+            <title>🛡️ Misinfo Containment Environment</title>
+            <style>
+                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 40px; background-color: #f4f7f9; }
+                .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-top: 5px solid #2563eb; }
+                h1 { color: #1e3a8a; margin-top: 0; }
+                .status { display: inline-block; padding: 4px 12px; border-radius: 20px; background: #dcfce7; color: #166534; font-weight: bold; font-size: 0.9em; margin-bottom: 20px; }
+                .links { margin-top: 30px; display: flex; gap: 15px; }
+                .btn { text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: 500; transition: all 0.2s; }
+                .btn-primary { background: #2563eb; color: white; }
+                .btn-primary:hover { background: #1d4ed8; }
+                .btn-outline { border: 1px solid #cbd5e1; color: #475569; }
+                .btn-outline:hover { background: #f8fafc; }
+                code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
+            </style>
+        </head>
+        <body>
+            <div class="card">
+                <div class="status">● SERVER ACTIVE</div>
+                <h1>🛡️ Misinfo Containment Env</h1>
+                <p>Welcome to the <strong>OpenEnv-compliant</strong> simulation environment for misinformation detection and containment.</p>
+                
+                <p>This server facilitates AI agent evaluation across three tasks: <code>Detection</code>, <code>Tracing</code>, and <code>Containment</code>.</p>
+                
+                <div class="links">
+                    <a href="/health" class="btn btn-primary">Check Health</a>
+                    <a href="/tasks" class="btn btn-outline">Available Tasks</a>
+                    <a href="/docs" class="btn btn-outline">API Documentation</a>
+                </div>
+            </div>
+            <p style="text-align: center; color: #94a3b8; font-size: 0.8em; margin-top: 20px;">Built for the OpenEnv Hackathon Benchmark</p>
+        </body>
+    </html>
+    """
+    return HTMLResponse(content=html_content)
+
+
 @app.get("/health", response_model=HealthResponse, tags=["system"])
 async def health():
     return HealthResponse(
