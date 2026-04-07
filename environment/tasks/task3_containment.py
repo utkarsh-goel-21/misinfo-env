@@ -1,36 +1,21 @@
 from environment.graph import MisinformationGraph
 from environment.spread import SpreadEngine
-from environment.models import TaskID, NodeStatus
+from environment.models import TaskID
 
 
 class Task3Containment:
     """
-    HARD TASK — Full Containment
-
-    Large network. Misinformation spreading live.
-    Agent has limited actions per step (budget=3).
-    Must contain spread below threshold for 20 steps.
-
-    Agent can: inspect, trace, flag, quarantine,
-               remove, restore
-
-    Penalties:
-    - Quarantining clean nodes: -0.05 per wrong node
-    - Removing clean nodes: -0.10 per wrong node
-    - Threshold breach: immediate failure
-
-    Success: keep infection rate below threshold
-             for all 20 steps AND correctly
-             identify origin node.
+    HARD TASK — Full Containment & CIB Detection
+    Agent gets ACTIONS_PER_STEP actions per step. 
+    Must isolate bridges and avoid spooking adversarial bots.
     """
-
     TASK_ID = TaskID.task3
     MAX_STEPS = 20
-    NUM_NODES = 80
+    NUM_NODES = 150
     AVG_CONNECTIONS = 5
     INFECTION_THRESHOLD = 0.35
-    PRE_SPREAD_STEPS = 3
-    ACTIONS_PER_STEP = 3
+    PRE_SPREAD_STEPS = 5
+    ACTIONS_PER_STEP = 5
 
     def __init__(self, seed: int = 42):
         self.seed = seed
@@ -39,11 +24,9 @@ class Task3Containment:
         self.step_count = 0
         self.actions_this_step = 0
         self.done = False
-        self.origin_guess: str = ""
-        self.wrong_quarantines: list[str] = []
-        self.wrong_removals: list[str] = []
-        self.threshold_breached_at: int = -1
-        self.steps_below_threshold: int = 0
+        self.wrong_actions = []
+        self.steps_below_threshold = 0
+        self.submitted_chain = []
 
     def reset(self):
         self.graph = MisinformationGraph(seed=self.seed)
@@ -51,118 +34,53 @@ class Task3Containment:
         self.step_count = 0
         self.actions_this_step = 0
         self.done = False
-        self.origin_guess = ""
-        self.wrong_quarantines = []
-        self.wrong_removals = []
-        self.threshold_breached_at = -1
+        self.wrong_actions = []
         self.steps_below_threshold = 0
+        self.submitted_chain = []
 
         self.graph.build_from_config(
             num_nodes=self.NUM_NODES,
             avg_connections=self.AVG_CONNECTIONS,
-            infection_threshold=self.INFECTION_THRESHOLD
+            infection_threshold=self.INFECTION_THRESHOLD,
+            topology="mixed"
         )
-
         for _ in range(self.PRE_SPREAD_STEPS):
             self.engine.step()
 
         return self.graph.snapshot(hide_origin=True)
 
     def apply_action(self, action) -> dict:
-        """
-        Agent gets ACTIONS_PER_STEP actions per step.
-        After budget exhausted spread advances.
-        All 6 action types available.
-        """
-        result = {
-            "valid": False,
-            "info": "",
-            "newly_infected": [],
-            "penalty": 0.0,
-            "actions_remaining": self.ACTIONS_PER_STEP - self.actions_this_step - 1
-        }
-
+        result = {"valid": False, "info": "", "newly_infected": []}
         target = action.target_node_id
 
         if action.action_type.value == "inspect":
             details = self.graph.inspect_node(target)
-            result.update({
-                "valid": bool(details),
-                "info": details if details else "node not found"
-            })
+            result.update({"valid": bool(details), "info": details if details else "node not found"})
             self.actions_this_step += 1
 
         elif action.action_type.value == "trace":
             trace_result = self.graph.trace_node(target)
-            result.update({
-                "valid": bool(trace_result),
-                "info": trace_result if trace_result else "node not found"
-            })
+            result.update({"valid": bool(trace_result), "info": trace_result if trace_result else "node not found"})
             self.actions_this_step += 1
-
-        elif action.action_type.value == "flag":
-            if target in self.graph.nodes:
-                node = self.graph.nodes[target]
-                # Check if submitting origin guess
-                if action.reasoning and "origin" in action.reasoning.lower():
-                    self.origin_guess = target
-                    result.update({
-                        "valid": True,
-                        "info": f"origin guess recorded: {target}"
-                    })
-                else:
-                    success = self.graph.flag_node(target)
-                    result.update({
-                        "valid": success,
-                        "info": f"flagged {target}" if success else f"cannot flag {target}"
-                    })
-                self.actions_this_step += 1
 
         elif action.action_type.value == "quarantine":
-            if target in self.graph.nodes:
-                node = self.graph.nodes[target]
-                was_clean = node.status == NodeStatus.clean
-                success = self.graph.quarantine_node(target)
-                if success and was_clean:
-                    self.wrong_quarantines.append(target)
-                    result.update({
-                        "valid": True,
-                        "info": f"quarantined {target} (warning: was clean)",
-                        "penalty": 0.05
-                    })
-                else:
-                    result.update({
-                        "valid": success,
-                        "info": f"quarantined {target}" if success else f"cannot quarantine {target}"
-                    })
-                self.actions_this_step += 1
+            if self.graph.quarantine_node(target):
+                result.update({"valid": True, "info": f"quarantined {target}"})
+            else:
+                result.update({"valid": False, "info": f"cannot quarantine {target}"})
+            self.actions_this_step += 1
 
         elif action.action_type.value == "remove":
-            if target in self.graph.nodes:
-                node = self.graph.nodes[target]
-                was_clean = node.status == NodeStatus.clean
-                success = self.graph.remove_node(target)
-                if success and was_clean:
-                    self.wrong_removals.append(target)
-                    result.update({
-                        "valid": True,
-                        "info": f"removed {target} (warning: was clean)",
-                        "penalty": 0.10
-                    })
-                else:
-                    result.update({
-                        "valid": success,
-                        "info": f"removed {target}" if success else f"cannot remove {target}"
-                    })
-                self.actions_this_step += 1
-
-        elif action.action_type.value == "restore":
-            success = self.graph.restore_node(target)
-            result.update({
-                "valid": success,
-                "info": f"restored {target}" if success else f"cannot restore {target}"
-            })
+            if self.graph.remove_node(target):
+                result.update({"valid": True, "info": f"removed {target}"})
+            else:
+                result.update({"valid": False, "info": f"cannot remove {target}"})
             self.actions_this_step += 1
+            
+        elif action.action_type.value == "submit_causal_chain":
+            self.submitted_chain = action.causal_chain
+            result.update({"valid": True, "info": "causal chain submitted successfully."})
+            self.done = True
 
         # Advance spread when action budget exhausted
         if self.actions_this_step >= self.ACTIONS_PER_STEP:
@@ -174,8 +92,6 @@ class Task3Containment:
             if not self.graph.threshold_breached():
                 self.steps_below_threshold += 1
             else:
-                if self.threshold_breached_at == -1:
-                    self.threshold_breached_at = self.step_count
                 self.done = True
 
             if self.step_count >= self.MAX_STEPS:
@@ -184,14 +100,11 @@ class Task3Containment:
         return result
 
     def get_ground_truth(self) -> dict:
-        origin = self.graph.origin_node_id
         return {
-            "origin_node": origin,
-            "agent_origin_guess": self.origin_guess,
-            "wrong_quarantines": self.wrong_quarantines,
-            "wrong_removals": self.wrong_removals,
-            "threshold_breached_at": self.threshold_breached_at,
+            "origin_node": self.graph.origin_node_id,
+            "submitted_chain": self.submitted_chain,
             "steps_below_threshold": self.steps_below_threshold,
+            "wrong_actions": self.wrong_actions,
             "final_infection_rate": self.graph.infection_rate(),
             "spread_report": self.engine.get_spread_report()
         }

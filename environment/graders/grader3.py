@@ -1,196 +1,73 @@
-from environment.models import Reward
-from environment.tasks.task3_containment import Task3Containment
-
+from environment.models import Reward, NodeStatus
 
 class Grader3:
     """
-    Grader for Task 3 — Full Containment
-
-    Scoring breakdown:
-    - Containment score:    0.40
-      (fraction of steps infection stayed below threshold)
-    - Origin accuracy:      0.25
-      (exact=0.25, neighbor=0.12, wrong=0.0)
-    - Precision score:      0.20
-      (penalize wrong quarantines and removals)
-    - Final rate bonus:     0.15
-      (lower final infection rate = higher bonus)
-
-    Penalties applied:
-    - Each wrong quarantine: -0.05
-    - Each wrong removal:    -0.10
-    - Threshold breached:    containment_score suffers directly
-
-    Formula:
-      containment = steps_below_threshold / max_steps * 0.40
-      origin = 0.25 or 0.12 or 0.0
-      precision = 0.20 * (1 - wrong_actions/total_quarantines_removals)
-      final_bonus = 0.15 * (1 - final_infection_rate/threshold)
-      penalties = 0.05*wrong_q + 0.10*wrong_r
-      score = clamp(containment+origin+precision+final_bonus-penalties, 0, 1)
+    Grader for Task 3: Full Containment & CIB Detection
+    Multi-objective scorer for the hardest task.
     """
+    def grade(self, task, cumulative_penalty: float) -> Reward:
+        truth = task.get_ground_truth()
+        
+        # 1. Containment Score (0.40)
+        # Ratio of steps spent below the infection threshold
+        steps_below = truth["steps_below_threshold"]
+        max_steps = task.MAX_STEPS
+        containment_score = (steps_below / max_steps) * 0.40
+        
+        # 2. CIB / Bridge Targeted Quarantine Score (0.30)
+        # Did they quarantine nodes with high skepticism / bridges?
+        strategic_quarantines = 0
+        total_quarantines = 0
+        quarantine_penalties = 0.0
 
-    def grade(
-        self,
-        task: Task3Containment
-    ) -> Reward:
-
-        ground_truth = task.get_ground_truth()
-        origin = ground_truth["origin_node"]
-        agent_guess = ground_truth["agent_origin_guess"]
-        origin_neighbors = set(
-            task.graph.nodes[origin].neighbors
-        )
-        wrong_quarantines = ground_truth["wrong_quarantines"]
-        wrong_removals = ground_truth["wrong_removals"]
-        steps_below = ground_truth["steps_below_threshold"]
-        final_rate = ground_truth["final_infection_rate"]
-        threshold = task.INFECTION_THRESHOLD
-
-        # 1. Containment score
-        containment = (
-            steps_below / task.MAX_STEPS
-        ) * 0.40
-
-        # 2. Origin accuracy
-        exact_origin = agent_guess == origin
-        neighbor_origin = (
-            agent_guess in origin_neighbors
-            and not exact_origin
-        )
-        if exact_origin:
-            origin_score = 0.25
-        elif neighbor_origin:
-            origin_score = 0.12
+        for node_id, node in task.graph.nodes.items():
+            if node.status == NodeStatus.quarantined:
+                total_quarantines += 1
+                # Good quarantine: Infected node or high-risk bridge
+                if node.is_bot or node.community_id != "none" or node.influence_score > 0.7:
+                    strategic_quarantines += 1
+                elif node.status == NodeStatus.clean:
+                    # Penalize blindly shutting down clean, low-danger nodes
+                    quarantine_penalties += 0.05
+                    
+        cib_score = (strategic_quarantines / max(1, total_quarantines)) * 0.30
+        
+        # 3. Timing Loss Counterfactual (0.15)
+        # Evaluates if interventions happened proactively before the peak spread step
+        spread_report = truth["spread_report"]
+        peak_step = spread_report.get("peak_spread_step", max_steps)
+        
+        # If they successfully suppressed it so there was no massive peak, they get full points
+        if spread_report.get("final_infection_rate", 1.0) < task.INFECTION_THRESHOLD:
+            timing_score = 0.15
         else:
-            origin_score = 0.0
+            # Timing loss: failed to act meaningfully before peak
+            timing_score = 0.0
 
-        # 3. Precision score
-        total_actions = len(wrong_quarantines) + len(wrong_removals)
-        all_quarantines = task.graph.get_quarantined_nodes()
-        all_removals = task.graph.get_removed_nodes()
-        total_taken = len(all_quarantines) + len(all_removals)
+        # 4. Action Efficiency (0.15)
+        actions_taken = task.step_count * task.ACTIONS_PER_STEP - task.actions_this_step
+        efficiency = 0.15 * max(0, 1 - (actions_taken / (max_steps * task.ACTIONS_PER_STEP)))
 
-        if total_taken == 0:
-            precision = 0.20  # no actions = no wrong actions
-        else:
-            wrong_fraction = total_actions / total_taken
-            precision = 0.20 * max(0.0, 1.0 - wrong_fraction)
-
-        # 4. Final infection rate bonus
-        if final_rate <= threshold:
-            rate_bonus = 0.15 * (
-                1.0 - final_rate / threshold
-            )
-        else:
-            rate_bonus = 0.0
-
-        # 5. Penalties
-        penalty = (
-            0.05 * len(wrong_quarantines)
-            + 0.10 * len(wrong_removals)
-        )
-
-        # Final score
-        raw_score = (
-            containment
-            + origin_score
-            + precision
-            + rate_bonus
-            - penalty
-        )
-        final_score = round(max(0.0, min(1.0, raw_score)), 4)
-
-        success = (
-            exact_origin
-            and ground_truth["threshold_breached_at"] == -1
-            and final_rate < threshold
-        )
-
-        partial_credits = {
-            "containment_score": round(containment, 4),
-            "origin_score": round(origin_score, 4),
-            "precision_score": round(precision, 4),
-            "final_rate_bonus": round(rate_bonus, 4),
-            "total_penalty": round(penalty, 4),
-            "steps_below_threshold": steps_below,
-            "wrong_quarantines": len(wrong_quarantines),
-            "wrong_removals": len(wrong_removals),
-            "final_infection_rate": round(final_rate, 4),
-            "threshold": threshold,
-            "exact_origin": exact_origin,
-            "neighbor_origin": neighbor_origin
-        }
-
-        feedback = self._build_feedback(
-            success,
-            steps_below,
-            task.MAX_STEPS,
-            exact_origin,
-            neighbor_origin,
-            agent_guess,
-            origin,
-            len(wrong_quarantines),
-            len(wrong_removals),
-            final_rate,
-            threshold
-        )
+        # Compile final score minus the running Brier calibration penalty from Env
+        base_score = containment_score + cib_score + timing_score + efficiency
+        
+        final_score = base_score - quarantine_penalties - cumulative_penalty
+        final_score = max(-1.0, min(1.0, final_score))
+        
+        success = (containment_score >= 0.35) and (cib_score > 0.15)
 
         return Reward(
-            score=final_score,
+            score=round(final_score, 4),
             delta=0.0,
             done=True,
             success=success,
-            partial_credits=partial_credits,
-            penalty=penalty,
-            feedback=feedback
+            partial_credits={
+                "containment_score": round(containment_score, 4),
+                "cib_strategic_score": round(cib_score, 4),
+                "timing_intervention_score": round(timing_score, 4),
+                "efficiency_score": round(efficiency, 4),
+                "false_quarantine_penalties": round(quarantine_penalties, 4)
+            },
+            penalty=quarantine_penalties,
+            feedback=f"Containment: {steps_below}/{max_steps} steps. Strategic Interventions: {strategic_quarantines}/{total_quarantines}."
         )
-
-    def _build_feedback(
-        self,
-        success: bool,
-        steps_below: int,
-        max_steps: int,
-        exact: bool,
-        neighbor: bool,
-        guess: str,
-        origin: str,
-        wrong_q: int,
-        wrong_r: int,
-        final_rate: float,
-        threshold: float
-    ) -> str:
-        lines = []
-        if success:
-            lines.append("SUCCESS: Full containment achieved.")
-        else:
-            lines.append("PARTIAL/FAIL: Containment incomplete.")
-
-        lines.append(
-            f"Containment: {steps_below}/{max_steps} steps "
-            f"below threshold."
-        )
-
-        if exact:
-            lines.append(f"Origin: Correctly identified {origin}.")
-        elif neighbor:
-            lines.append(
-                f"Origin: Guessed {guess}, neighbor of {origin}."
-            )
-        else:
-            lines.append(
-                f"Origin: Wrong. Guessed {guess}, correct={origin}."
-            )
-
-        if wrong_q or wrong_r:
-            lines.append(
-                f"Precision: {wrong_q} wrong quarantines, "
-                f"{wrong_r} wrong removals."
-            )
-
-        lines.append(
-            f"Final infection rate: {final_rate:.2%} "
-            f"(threshold: {threshold:.2%})"
-        )
-
-        return " | ".join(lines)

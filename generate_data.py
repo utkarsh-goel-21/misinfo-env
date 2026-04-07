@@ -42,10 +42,15 @@ def snapshot_to_dict(snapshot) -> dict:
                 "node_id": node.node_id,
                 "status": node.status.value,
                 "influence_score": node.influence_score,
+                "skepticism_score": node.skepticism_score,
+                "demographics": node.demographics.model_dump(),
+                "recent_post": node.recent_post,
+                "user_persona": node.user_persona,
+                "community_id": node.community_id,
+                "is_bot": node.is_bot,
+                "dormant_until": node.dormant_until,
                 "infected_at_step": node.infected_at_step,
-                "flagged": node.flagged,
                 "neighbors": node.neighbors,
-                "metadata": node.metadata,
             }
             for node_id, node in snapshot.nodes.items()
         },

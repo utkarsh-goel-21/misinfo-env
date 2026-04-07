@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, Any
+from typing import Optional, Any, List, Dict
 from enum import Enum
 
 
@@ -11,17 +11,15 @@ class NodeStatus(str, Enum):
     clean = "clean"
     infected = "infected"
     quarantined = "quarantined"
-    flagged = "flagged"
     removed = "removed"
 
 
 class ActionType(str, Enum):
-    flag = "flag"           # flag a node as suspicious
-    quarantine = "quarantine"  # isolate node from network
-    remove = "remove"       # permanently remove node
-    trace = "trace"         # investigate node's origin
-    inspect = "inspect"     # get detailed info about node
-    restore = "restore"     # restore a wrongly quarantined node
+    quarantine = "quarantine"
+    remove = "remove"
+    trace = "trace"
+    inspect = "inspect"
+    submit_causal_chain = "submit_causal_chain"
 
 
 class TaskID(str, Enum):
@@ -30,42 +28,65 @@ class TaskID(str, Enum):
     task3 = "task3_containment"
 
 
+class Gender(str, Enum):
+    MALE = "male"
+    FEMALE = "female"
+    NON_BINARY = "non_binary"
+
+
+class PoliticalLeaning(str, Enum):
+    LEFT = "left"
+    CENTER = "center"
+    RIGHT = "right"
+    RADICAL = "radical"
+
+
 # ─────────────────────────────────────────
 # GRAPH COMPONENTS
 # ─────────────────────────────────────────
 
+class Demographics(BaseModel):
+    age: int = Field(ge=13, le=99)
+    gender: Gender
+    political_leaning: PoliticalLeaning
+    occupation: str
+
+
 class Node(BaseModel):
     node_id: str
     status: NodeStatus = NodeStatus.clean
-    influence_score: float = Field(
-        ge=0.0, le=1.0,
-        description="How many neighbors this node can infect per step"
-    )
+    influence_score: float = Field(ge=0.0, le=1.0)
+    skepticism_score: float = Field(ge=0.0, le=1.0)
+    
+    # ── Semantic & Demographic Layer ──
+    demographics: Demographics
+    recent_post: str
+    user_persona: str
+    community_id: Optional[str] = None
+    
+    # ── Adversarial Layer ──
+    is_bot: bool = False
+    dormant_until: Optional[int] = None
+    
+    # ── Graph Memory ──
     infected_at_step: Optional[int] = None
-    flagged: bool = False
-    neighbors: list[str] = []
-    metadata: dict = {}
+    neighbors: List[str] = []
 
 
 class Edge(BaseModel):
     source: str
     target: str
-    weight: float = Field(
-        ge=0.0, le=1.0,
-        description="Probability of infection spreading across this edge"
-    )
+    weight: float = Field(ge=0.0, le=1.0)
 
 
 class NetworkSnapshot(BaseModel):
     step: int
-    nodes: dict[str, Node]
-    edges: list[Edge]
+    nodes: Dict[str, Node]
+    edges: List[Edge]
     total_infected: int
     total_quarantined: int
-    infection_threshold: float = Field(
-        description="Fraction of network infected = game over"
-    )
-    origin_node_id: Optional[str] = None  # hidden from agent in task2/3
+    infection_threshold: float
+    origin_node_id: Optional[str] = None
 
 
 # ─────────────────────────────────────────
@@ -76,14 +97,17 @@ class Observation(BaseModel):
     task_id: TaskID
     step_number: int
     max_steps: int
-    actions_remaining: Optional[int] = None  # only for task3
-    network: NetworkSnapshot
-    recently_infected: list[str] = Field(
-        description="Nodes that got infected this step"
+    actions_remaining: Optional[int] = None
+    
+    # ── Partial Observability ──
+    stream_reports: List[str] = Field(
+        description="List of node IDs flagged by heuristic alerts this step."
     )
-    agent_message: str = Field(
-        description="Human readable situation summary"
+    inspection_results: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Results from 'inspect' or 'trace' actions."
     )
+    agent_message: str = Field(description="System summary")
 
 
 # ─────────────────────────────────────────
@@ -92,10 +116,22 @@ class Observation(BaseModel):
 
 class Action(BaseModel):
     action_type: ActionType
-    target_node_id: str
-    reasoning: Optional[str] = Field(
+    
+    target_node_id: Optional[str] = Field(
         default=None,
-        description="Agent explains why it is taking this action"
+        description="Node to act upon. Null for submit_causal_chain."
+    )
+    
+    confidence: float = Field(
+        ge=0.0, le=1.0,
+        description="MANDATORY calibration score. Overconfidence heavily penalized."
+    )
+    
+    reasoning: Optional[str] = None
+    
+    causal_chain: Optional[List[Dict[str, str]]] = Field(
+        default=None,
+        description="Used with submit_causal_chain. List of {'from': 'node_x', 'to': 'node_y'} edges."
     )
 
 
@@ -104,22 +140,15 @@ class Action(BaseModel):
 # ─────────────────────────────────────────
 
 class Reward(BaseModel):
-    score: float = Field(ge=0.0, le=1.0)
-    delta: float = Field(
-        description="Change in score from previous step"
-    )
+    score: float = Field(ge=-1.0, le=1.0)
+    delta: float = Field(description="Change in score from previous step")
     done: bool
     success: bool
-    partial_credits: dict[str, Any] = Field(
-        description="Breakdown of what contributed to score"
+    partial_credits: Dict[str, Any] = Field(
+        description="Breakdown including Brier score calibration."
     )
-    penalty: float = Field(
-        default=0.0,
-        description="Penalties incurred this step"
-    )
-    feedback: str = Field(
-        description="Human readable reward explanation"
-    )
+    penalty: float = Field(default=0.0)
+    feedback: str
 
 
 # ─────────────────────────────────────────
@@ -131,10 +160,9 @@ class EnvironmentState(BaseModel):
     step_number: int
     network: NetworkSnapshot
     origin_node_id: str
-    infected_nodes: list[str]
-    quarantined_nodes: list[str]
-    flagged_nodes: list[str]
-    removed_nodes: list[str]
-    actions_taken: list[Action]
+    infected_nodes: List[str]
+    quarantined_nodes: List[str]
+    removed_nodes: List[str]
+    actions_taken: List[Action]
     cumulative_score: float = 0.0
     done: bool = False

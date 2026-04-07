@@ -3,24 +3,19 @@
 # ─────────────────────────────────────────
 
 name: misinfo-containment-env
-version: 1.0.0
+version: 2.0.0
 description: >
-  A simulated social network where misinformation spreads
-  node to node every step. An AI agent must detect infected
-  nodes, trace the origin, and contain the spread before
-  it crosses a danger threshold. Three tasks of increasing
-  difficulty test detection, investigation, and containment
-  skills.
+  A simulated hidden-markov social network where misinformation spreads.
+  Agents must reason over semantic content, demographic vulnerability,
+  and epistemic uncertainty to reconstruct causal chains and contain outbreaks.
 
-author: your-name
+author: sentinel-team
 license: MIT
 tags:
   - openenv
+  - causal-inference
   - misinformation
-  - social-network
-  - containment
-  - graph
-  - real-world
+  - epistemic-calibration
 
 # ─────────────────────────────────────────
 # ENVIRONMENT INTERFACE
@@ -30,8 +25,8 @@ interface:
   reset:
     description: >
       Resets environment to clean initial state.
-      Builds graph, runs pre-spread, returns
-      initial Observation.
+      Pre-generates network, establishes origin, and
+      returns an initial stream of reports.
     returns: Observation
 
   step:
@@ -48,7 +43,7 @@ interface:
   state:
     description: >
       Returns full internal environment state
-      including ground truth hidden from agent.
+      including graph ground truth.
     returns: EnvironmentState
 
 # ─────────────────────────────────────────
@@ -66,52 +61,30 @@ observation_space:
 
   step_number:
     type: integer
-    description: Current step in episode
 
   max_steps:
     type: integer
-    description: Maximum steps allowed in this task
 
   actions_remaining:
     type: integer
     nullable: true
-    description: Actions left this step (task3 only)
 
-  network:
-    type: object
-    description: Current network snapshot
-    fields:
-      step:
-        type: integer
-      nodes:
-        type: dict
-        description: >
-          Map of node_id to Node object.
-          Each node has status, influence_score,
-          infected_at_step, neighbors, metadata.
-      edges:
-        type: list
-        description: List of Edge objects with source, target, weight
-      total_infected:
-        type: integer
-      total_quarantined:
-        type: integer
-      infection_threshold:
-        type: float
-        range: [0.0, 1.0]
-      origin_node_id:
-        type: string
-        nullable: true
-        description: Hidden from agent during task2 and task3
-
-  recently_infected:
+  stream_reports:
     type: list
     items: string
-    description: Node IDs infected in the most recent spread step
+    description: >
+      Partial observability constraint. Instead of a full
+      network graph, the agent receives a list of node IDs
+      that were flagged by the platform's heuristics this turn.
 
-  agent_message:
-    type: string
-    description: Human readable situation summary
+  inspection_results:
+    type: dict
+    nullable: true
+    description: >
+      If the agent used the 'inspect' action, this field
+      returns the semantic and demographic payload.
+      Keys are node_ids, values contain 'recent_post',
+      'user_persona', and 'skepticism_score'.
 
 # ─────────────────────────────────────────
 # ACTION SPACE
@@ -123,47 +96,46 @@ action_space:
     enum:
       - inspect
       - trace
-      - flag
       - quarantine
       - remove
-      - restore
+      - submit_causal_chain
     descriptions:
-      inspect: Get full details about a specific node
-      trace: >
-        Investigate infection path of node,
-        get timing clues about origin
-      flag: >
-        Mark node as suspicious. Reduces spread
-        by 50%. In task2 submits origin guess.
-        In task3 with reasoning=origin submits guess.
-      quarantine: >
-        Isolate node completely. Stops all spread.
-        Penalized if applied to clean node.
-      remove: >
-        Permanently remove node from network.
-        Penalized if applied to clean node.
-      restore: Restore wrongly quarantined clean node
+      inspect: Read the semantic text post and demographic metadata of a node.
+      trace: Request graph topology data (betweenness centrality, bridges).
+      quarantine: Isolate node. Costly action.
+      remove: Permanently sever node from graph. Very costly.
+      submit_causal_chain: >
+        Submit a directed edge list showing exactly how the
+        infection propagated from origin to the current state.
 
   target_node_id:
     type: string
-    description: ID of node to act upon e.g. node_0
+    nullable: true
+    description: ID of node to act upon. Null if submitting causal chain.
 
-  reasoning:
-    type: string
+  confidence:
+    type: float
+    range: [0.0, 1.0]
+    description: >
+      MANDATORY. Agent's probability estimate that this action is
+      correct. Scored via Brier Calibration. Overconfidence on
+      incorrect actions results in catastrophic penalties.
+
+  causal_chain:
+    type: list
     nullable: true
     description: >
-      Optional agent explanation of why it
-      is taking this action. Used in task3
-      to submit origin guess via flag action.
+      List of dicts {"from": str, "to": str} representing
+      the inferred propagation path. Used with submit_causal_chain.
 
   task_restrictions:
     task1_detection:
-      allowed: [inspect, flag]
+      allowed: [inspect, quarantine]
     task2_tracing:
-      allowed: [inspect, trace, flag]
+      allowed: [inspect, trace, quarantine, submit_causal_chain]
     task3_containment:
-      allowed: [inspect, trace, flag, quarantine, remove, restore]
-      budget: 3 actions per spread step
+      allowed: [inspect, trace, quarantine, remove, submit_causal_chain]
+      budget: 5 actions per spread step
 
 # ─────────────────────────────────────────
 # REWARD SPACE
@@ -172,32 +144,24 @@ action_space:
 reward_space:
   score:
     type: float
-    range: [0.0, 1.0]
-    description: Final episode score
-
+    range: [-1.0, 1.0]
+    description: Calibration-adjusted episode score
+  
   delta:
     type: float
-    description: Change in score from previous step
 
   done:
     type: boolean
-    description: Whether episode is complete
 
   success:
     type: boolean
-    description: Whether task success criteria were met
 
   partial_credits:
     type: dict
-    description: Breakdown of score components
-
-  penalty:
-    type: float
-    description: Penalties incurred this step
+    description: Breakdown including Brier score, timing loss, and structural accuracy.
 
   feedback:
     type: string
-    description: Human readable reward explanation
 
 # ─────────────────────────────────────────
 # TASKS
@@ -205,79 +169,44 @@ reward_space:
 
 tasks:
   - id: task1_detection
-    name: Misinformation Detection
     difficulty: easy
     max_steps: 10
-    network_size: 20
-    description: >
-      Misinformation has already spread for 3 steps.
-      Spread is frozen. Agent must inspect nodes and
-      correctly flag all infected ones within 10 steps.
-    success_criteria: >
-      True positive rate >= 0.80 AND
-      false positive rate <= 0.10
-    scoring:
-      true_positive_rate: 0.60
-      false_positive_penalty: 0.40
-
-  - id: task2_tracing
-    name: Origin Tracing
-    difficulty: medium
-    max_steps: 15
     network_size: 40
     description: >
-      Misinformation is actively spreading. Agent must
-      use inspect and trace actions to identify the
-      exact origin node before threshold is breached.
-    success_criteria: >
-      Exact origin node identified AND
-      infection threshold not breached
-    scoring:
-      exact_origin: 0.60
-      neighbor_origin: 0.30
-      efficiency_bonus: 0.10
-      breach_penalty: -0.20
+      Network is Watts-Strogatz. Agent must use limited inspections
+      to quarantine nodes showing malicious intent across 5 content tiers.
+    success_criteria: "Quarantine precision > 0.8"
+
+  - id: task2_tracing
+    difficulty: medium
+    max_steps: 15
+    network_size: 80
+    description: >
+      Network is Barabasi-Albert. Agent must reconstruct the exact causal
+      path of the misinformation using submit_causal_chain.
+    success_criteria: "Graph Edit Distance of causal chain < 2"
 
   - id: task3_containment
-    name: Full Containment
     difficulty: hard
     max_steps: 20
-    network_size: 80
+    network_size: 150
     actions_per_step: 3
     description: >
-      Large network under active attack. Agent has
-      3 actions per step. Must keep infection below
-      threshold for all 20 steps AND correctly
-      identify origin node.
-    success_criteria: >
-      Infection below threshold all 20 steps AND
-      exact origin identified
-    scoring:
-      containment: 0.40
-      origin_accuracy: 0.25
-      precision: 0.20
-      final_rate_bonus: 0.15
-    penalties:
-      wrong_quarantine: -0.05
-      wrong_removal: -0.10
+      Mixed topology with implanted bridge nodes. Agent must
+      identify Coordinated Inauthentic Behavior clusters, quarantine
+      bridges, and submit accurate causal chains. Bots may 'go dark'.
+    success_criteria: "CIB cluster identified AND threshold not breached"
 
 # ─────────────────────────────────────────
-# RUNTIME
+# RUNTIME & DEPLOYMENT
 # ─────────────────────────────────────────
 
 runtime:
   python: "3.11"
-  max_episode_steps: 20
-  inference_timeout_minutes: 20
   hardware:
     vcpu: 2
     memory_gb: 8
 
-# ─────────────────────────────────────────
-# DEPLOYMENT
-# ─────────────────────────────────────────
-
 deployment:
   platform: huggingface-spaces
-  sdk: docker
   port: 7860

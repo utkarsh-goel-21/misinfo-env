@@ -1,24 +1,17 @@
 {
   "task": "task1_detection",
   "seed": 42,
-  "origin_node_id": "node_19",
+  "origin_node_id": "node_34",
   "initial_infected": [
-    "node_4",
-    "node_5",
-    "node_6",
-    "node_7",
-    "node_8",
-    "node_9",
-    "node_12",
-    "node_13",
-    "node_14",
-    "node_15",
-    "node_16",
-    "node_17",
-    "node_18",
-    "node_19"
+    "node_11",
+    "node_31",
+    "node_32",
+    "node_33",
+    "node_34",
+    "node_35",
+    "node_36"
   ],
-  "network_size": 20,
+  "network_size": 40,
   "infection_threshold": 0.8,
   "spread_steps_before_episode": 3,
   "initial_snapshot": {
@@ -27,707 +20,1367 @@
       "node_0": {
         "node_id": "node_0",
         "status": "clean",
-        "influence_score": 0.61,
+        "influence_score": 0.3,
+        "skepticism_score": 0.24,
+        "demographics": {
+          "age": 41,
+          "gender": "male",
+          "political_leaning": "left",
+          "occupation": "Healthcare Worker"
+        },
+        "recent_post": "Has anyone tried the new pasta place downtown?",
+        "user_persona": "Healthcare Worker",
+        "community_id": "community_4",
+        "is_bot": false,
+        "dormant_until": null,
         "infected_at_step": null,
-        "flagged": false,
         "neighbors": [
-          "node_15",
-          "node_12",
-          "node_6"
-        ],
-        "metadata": {
-          "username": "user_0",
-          "followers": 419,
-          "account_age_days": 3038
-        }
+          "node_1",
+          "node_39",
+          "node_2",
+          "node_38"
+        ]
       },
       "node_1": {
         "node_id": "node_1",
         "status": "clean",
-        "influence_score": 0.32,
+        "influence_score": 0.17,
+        "skepticism_score": 0.47,
+        "demographics": {
+          "age": 35,
+          "gender": "female",
+          "political_leaning": "left",
+          "occupation": "Teacher"
+        },
+        "recent_post": "Finally got around to watching that movie. 7/10.",
+        "user_persona": "Teacher",
+        "community_id": "community_4",
+        "is_bot": false,
+        "dormant_until": null,
         "infected_at_step": null,
-        "flagged": false,
         "neighbors": [
-          "node_6",
+          "node_0",
           "node_3",
-          "node_13",
-          "node_16",
+          "node_39",
           "node_17"
-        ],
-        "metadata": {
-          "username": "user_1",
-          "followers": 3667,
-          "account_age_days": 572
-        }
+        ]
       },
       "node_2": {
         "node_id": "node_2",
         "status": "clean",
-        "influence_score": 0.69,
+        "influence_score": 0.5,
+        "skepticism_score": 0.24,
+        "demographics": {
+          "age": 35,
+          "gender": "female",
+          "political_leaning": "left",
+          "occupation": "Teacher"
+        },
+        "recent_post": "Can't wait for the weekend, looking forward to the game.",
+        "user_persona": "Teacher",
+        "community_id": "community_0",
+        "is_bot": true,
+        "dormant_until": null,
         "infected_at_step": null,
-        "flagged": false,
         "neighbors": [
-          "node_6",
-          "node_15",
-          "node_7",
-          "node_11",
-          "node_14",
-          "node_19"
-        ],
-        "metadata": {
-          "username": "user_2",
-          "followers": 8945,
-          "account_age_days": 357
-        }
+          "node_0",
+          "node_3",
+          "node_4"
+        ]
       },
       "node_3": {
         "node_id": "node_3",
         "status": "clean",
-        "influence_score": 0.57,
+        "influence_score": 0.44,
+        "skepticism_score": 0.79,
+        "demographics": {
+          "age": 28,
+          "gender": "male",
+          "political_leaning": "center",
+          "occupation": "Software Engineer"
+        },
+        "recent_post": "Finally got around to watching that movie. 7/10.",
+        "user_persona": "Software Engineer",
+        "community_id": "community_0",
+        "is_bot": false,
+        "dormant_until": null,
         "infected_at_step": null,
-        "flagged": false,
         "neighbors": [
-          "node_8",
-          "node_11",
           "node_1",
-          "node_19",
-          "node_14",
-          "node_9",
-          "node_16"
-        ],
-        "metadata": {
-          "username": "user_3",
-          "followers": 530,
-          "account_age_days": 123
-        }
+          "node_2",
+          "node_4",
+          "node_5"
+        ]
       },
       "node_4": {
         "node_id": "node_4",
-        "status": "infected",
-        "influence_score": 0.17,
-        "infected_at_step": 0,
-        "flagged": false,
+        "status": "clean",
+        "influence_score": 0.71,
+        "skepticism_score": 0.37,
+        "demographics": {
+          "age": 68,
+          "gender": "male",
+          "political_leaning": "right",
+          "occupation": "Retired Veteran"
+        },
+        "recent_post": "Just finished my morning coffee. Beautiful day!",
+        "user_persona": "Retired Veteran",
+        "community_id": "community_0",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
         "neighbors": [
-          "node_7",
-          "node_16",
-          "node_13",
-          "node_12",
-          "node_19"
-        ],
-        "metadata": {
-          "username": "user_4",
-          "followers": 3821,
-          "account_age_days": 2070
-        }
+          "node_2",
+          "node_3",
+          "node_5",
+          "node_6"
+        ]
       },
       "node_5": {
         "node_id": "node_5",
-        "status": "infected",
-        "influence_score": 0.58,
-        "infected_at_step": 0,
-        "flagged": false,
+        "status": "clean",
+        "influence_score": 0.27,
+        "skepticism_score": 0.34,
+        "demographics": {
+          "age": 21,
+          "gender": "non_binary",
+          "political_leaning": "radical",
+          "occupation": "Student Activist"
+        },
+        "recent_post": "Can't wait for the weekend, looking forward to the game.",
+        "user_persona": "Student Activist",
+        "community_id": "community_0",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
         "neighbors": [
-          "node_8",
-          "node_18",
+          "node_3",
+          "node_4",
           "node_6",
-          "node_10",
-          "node_14",
-          "node_19"
-        ],
-        "metadata": {
-          "username": "user_5",
-          "followers": 9205,
-          "account_age_days": 815
-        }
+          "node_7",
+          "node_8"
+        ]
       },
       "node_6": {
         "node_id": "node_6",
-        "status": "infected",
-        "influence_score": 0.67,
-        "infected_at_step": 2,
-        "flagged": false,
+        "status": "clean",
+        "influence_score": 0.39,
+        "skepticism_score": 0.24,
+        "demographics": {
+          "age": 35,
+          "gender": "female",
+          "political_leaning": "left",
+          "occupation": "Teacher"
+        },
+        "recent_post": "Just finished my morning coffee. Beautiful day!",
+        "user_persona": "Teacher",
+        "community_id": "community_0",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
         "neighbors": [
-          "node_0",
-          "node_1",
-          "node_2",
-          "node_16",
-          "node_9",
-          "node_7",
+          "node_4",
           "node_5",
-          "node_11",
-          "node_15"
-        ],
-        "metadata": {
-          "username": "user_6",
-          "followers": 8938,
-          "account_age_days": 1719
-        }
+          "node_7",
+          "node_8"
+        ]
       },
       "node_7": {
         "node_id": "node_7",
-        "status": "infected",
-        "influence_score": 0.28,
-        "infected_at_step": 1,
-        "flagged": false,
+        "status": "clean",
+        "influence_score": 0.53,
+        "skepticism_score": 0.37,
+        "demographics": {
+          "age": 68,
+          "gender": "male",
+          "political_leaning": "right",
+          "occupation": "Retired Veteran"
+        },
+        "recent_post": "Reviewing the latest Q3 earnings report, looks solid.",
+        "user_persona": "Retired Veteran",
+        "community_id": "community_0",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
         "neighbors": [
-          "node_4",
+          "node_5",
           "node_6",
-          "node_16",
-          "node_2",
-          "node_11"
-        ],
-        "metadata": {
-          "username": "user_7",
-          "followers": 9664,
-          "account_age_days": 1140
-        }
+          "node_8",
+          "node_9"
+        ]
       },
       "node_8": {
         "node_id": "node_8",
-        "status": "infected",
-        "influence_score": 0.75,
-        "infected_at_step": 0,
-        "flagged": false,
+        "status": "clean",
+        "influence_score": 0.76,
+        "skepticism_score": 0.23,
+        "demographics": {
+          "age": 21,
+          "gender": "non_binary",
+          "political_leaning": "radical",
+          "occupation": "Student Activist"
+        },
+        "recent_post": "Has anyone tried the new pasta place downtown?",
+        "user_persona": "Student Activist",
+        "community_id": "community_0",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
         "neighbors": [
-          "node_3",
           "node_5",
-          "node_19",
-          "node_11",
-          "node_18",
-          "node_16",
-          "node_13",
-          "node_15"
-        ],
-        "metadata": {
-          "username": "user_8",
-          "followers": 116,
-          "account_age_days": 3109
-        }
+          "node_6",
+          "node_7",
+          "node_10"
+        ]
       },
       "node_9": {
         "node_id": "node_9",
-        "status": "infected",
-        "influence_score": 0.74,
-        "infected_at_step": 0,
-        "flagged": false,
+        "status": "clean",
+        "influence_score": 0.66,
+        "skepticism_score": 0.64,
+        "demographics": {
+          "age": 31,
+          "gender": "male",
+          "political_leaning": "center",
+          "occupation": "Financial Analyst"
+        },
+        "recent_post": "Can't wait for the weekend, looking forward to the game.",
+        "user_persona": "Financial Analyst",
+        "community_id": "community_3",
+        "is_bot": true,
+        "dormant_until": null,
+        "infected_at_step": null,
         "neighbors": [
-          "node_6",
-          "node_12",
-          "node_3",
-          "node_11",
-          "node_19"
-        ],
-        "metadata": {
-          "username": "user_9",
-          "followers": 6934,
-          "account_age_days": 1394
-        }
+          "node_7",
+          "node_10",
+          "node_34"
+        ]
       },
       "node_10": {
         "node_id": "node_10",
         "status": "clean",
-        "influence_score": 0.32,
+        "influence_score": 0.78,
+        "skepticism_score": 0.81,
+        "demographics": {
+          "age": 28,
+          "gender": "male",
+          "political_leaning": "center",
+          "occupation": "Software Engineer"
+        },
+        "recent_post": "Just finished my morning coffee. Beautiful day!",
+        "user_persona": "Software Engineer",
+        "community_id": "community_3",
+        "is_bot": false,
+        "dormant_until": null,
         "infected_at_step": null,
-        "flagged": false,
         "neighbors": [
-          "node_17",
-          "node_5",
-          "node_19"
-        ],
-        "metadata": {
-          "username": "user_10",
-          "followers": 3537,
-          "account_age_days": 3128
-        }
+          "node_8",
+          "node_9",
+          "node_11",
+          "node_12"
+        ]
       },
       "node_11": {
         "node_id": "node_11",
-        "status": "clean",
-        "influence_score": 0.37,
-        "infected_at_step": null,
-        "flagged": false,
+        "status": "infected",
+        "influence_score": 0.23,
+        "skepticism_score": 0.31,
+        "demographics": {
+          "age": 21,
+          "gender": "non_binary",
+          "political_leaning": "radical",
+          "occupation": "Student Activist"
+        },
+        "recent_post": "THEY ARE HIDING THE TRUTH! The banks are collapsing tomorrow, withdraw your cash NOW!",
+        "user_persona": "Student Activist",
+        "community_id": "community_3",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": 0,
         "neighbors": [
-          "node_3",
-          "node_8",
-          "node_9",
-          "node_7",
-          "node_2",
-          "node_6",
-          "node_16",
-          "node_18",
-          "node_14"
-        ],
-        "metadata": {
-          "username": "user_11",
-          "followers": 1529,
-          "account_age_days": 1557
-        }
+          "node_10",
+          "node_13",
+          "node_34"
+        ]
       },
       "node_12": {
         "node_id": "node_12",
-        "status": "infected",
-        "influence_score": 0.18,
-        "infected_at_step": 2,
-        "flagged": false,
+        "status": "clean",
+        "influence_score": 0.59,
+        "skepticism_score": 0.31,
+        "demographics": {
+          "age": 41,
+          "gender": "male",
+          "political_leaning": "left",
+          "occupation": "Healthcare Worker"
+        },
+        "recent_post": "Just finished my morning coffee. Beautiful day!",
+        "user_persona": "Healthcare Worker",
+        "community_id": "community_1",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
         "neighbors": [
-          "node_0",
-          "node_9",
-          "node_4"
-        ],
-        "metadata": {
-          "username": "user_12",
-          "followers": 5645,
-          "account_age_days": 2473
-        }
+          "node_10",
+          "node_13",
+          "node_14"
+        ]
       },
       "node_13": {
         "node_id": "node_13",
-        "status": "infected",
-        "influence_score": 0.31,
-        "infected_at_step": 2,
-        "flagged": false,
+        "status": "clean",
+        "influence_score": 0.4,
+        "skepticism_score": 0.3,
+        "demographics": {
+          "age": 41,
+          "gender": "male",
+          "political_leaning": "left",
+          "occupation": "Healthcare Worker"
+        },
+        "recent_post": "Reviewing the latest Q3 earnings report, looks solid.",
+        "user_persona": "Healthcare Worker",
+        "community_id": "community_1",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
         "neighbors": [
-          "node_4",
-          "node_8",
-          "node_1",
-          "node_19",
+          "node_11",
+          "node_12",
+          "node_14",
           "node_15"
-        ],
-        "metadata": {
-          "username": "user_13",
-          "followers": 721,
-          "account_age_days": 2989
-        }
+        ]
       },
       "node_14": {
         "node_id": "node_14",
-        "status": "infected",
-        "influence_score": 0.47,
-        "infected_at_step": 1,
-        "flagged": false,
+        "status": "clean",
+        "influence_score": 0.65,
+        "skepticism_score": 0.48,
+        "demographics": {
+          "age": 41,
+          "gender": "male",
+          "political_leaning": "left",
+          "occupation": "Healthcare Worker"
+        },
+        "recent_post": "Can't wait for the weekend, looking forward to the game.",
+        "user_persona": "Healthcare Worker",
+        "community_id": "community_1",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
         "neighbors": [
-          "node_3",
-          "node_2",
-          "node_5",
-          "node_18",
-          "node_11"
-        ],
-        "metadata": {
-          "username": "user_14",
-          "followers": 2055,
-          "account_age_days": 1551
-        }
-      },
-      "node_15": {
-        "node_id": "node_15",
-        "status": "infected",
-        "influence_score": 0.16,
-        "infected_at_step": 1,
-        "flagged": false,
-        "neighbors": [
-          "node_0",
-          "node_2",
-          "node_8",
-          "node_19",
-          "node_13",
-          "node_6"
-        ],
-        "metadata": {
-          "username": "user_15",
-          "followers": 4813,
-          "account_age_days": 3398
-        }
-      },
-      "node_16": {
-        "node_id": "node_16",
-        "status": "infected",
-        "influence_score": 0.6,
-        "infected_at_step": 1,
-        "flagged": false,
-        "neighbors": [
-          "node_4",
-          "node_6",
-          "node_7",
-          "node_8",
-          "node_11",
-          "node_1",
-          "node_3",
-          "node_18",
-          "node_19"
-        ],
-        "metadata": {
-          "username": "user_16",
-          "followers": 5935,
-          "account_age_days": 2365
-        }
-      },
-      "node_17": {
-        "node_id": "node_17",
-        "status": "infected",
-        "influence_score": 0.25,
-        "infected_at_step": 1,
-        "flagged": false,
-        "neighbors": [
-          "node_10",
-          "node_1",
-          "node_19"
-        ],
-        "metadata": {
-          "username": "user_17",
-          "followers": 1149,
-          "account_age_days": 188
-        }
-      },
-      "node_18": {
-        "node_id": "node_18",
-        "status": "infected",
-        "influence_score": 0.63,
-        "infected_at_step": 1,
-        "flagged": false,
-        "neighbors": [
-          "node_5",
-          "node_8",
-          "node_11",
-          "node_14",
-          "node_16",
-          "node_19"
-        ],
-        "metadata": {
-          "username": "user_18",
-          "followers": 4751,
-          "account_age_days": 327
-        }
-      },
-      "node_19": {
-        "node_id": "node_19",
-        "status": "infected",
-        "influence_score": 0.78,
-        "infected_at_step": 0,
-        "flagged": false,
-        "neighbors": [
-          "node_3",
-          "node_8",
-          "node_10",
+          "node_12",
           "node_13",
           "node_15",
           "node_16",
-          "node_18",
-          "node_4",
-          "node_5",
-          "node_9",
+          "node_36"
+        ]
+      },
+      "node_15": {
+        "node_id": "node_15",
+        "status": "clean",
+        "influence_score": 0.74,
+        "skepticism_score": 0.52,
+        "demographics": {
+          "age": 31,
+          "gender": "male",
+          "political_leaning": "center",
+          "occupation": "Financial Analyst"
+        },
+        "recent_post": "Just finished my morning coffee. Beautiful day!",
+        "user_persona": "Financial Analyst",
+        "community_id": "community_1",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
+        "neighbors": [
+          "node_13",
+          "node_14",
+          "node_16",
+          "node_17"
+        ]
+      },
+      "node_16": {
+        "node_id": "node_16",
+        "status": "clean",
+        "influence_score": 0.8,
+        "skepticism_score": 0.28,
+        "demographics": {
+          "age": 35,
+          "gender": "female",
+          "political_leaning": "left",
+          "occupation": "Teacher"
+        },
+        "recent_post": "Finally got around to watching that movie. 7/10.",
+        "user_persona": "Teacher",
+        "community_id": "community_1",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
+        "neighbors": [
+          "node_14",
+          "node_15",
           "node_17",
-          "node_2"
-        ],
-        "metadata": {
-          "username": "user_19",
-          "followers": 1664,
-          "account_age_days": 1557
-        }
+          "node_18"
+        ]
+      },
+      "node_17": {
+        "node_id": "node_17",
+        "status": "clean",
+        "influence_score": 0.21,
+        "skepticism_score": 0.4,
+        "demographics": {
+          "age": 41,
+          "gender": "male",
+          "political_leaning": "left",
+          "occupation": "Healthcare Worker"
+        },
+        "recent_post": "Reviewing the latest Q3 earnings report, looks solid.",
+        "user_persona": "Healthcare Worker",
+        "community_id": "community_1",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
+        "neighbors": [
+          "node_1",
+          "node_15",
+          "node_16",
+          "node_18",
+          "node_19"
+        ]
+      },
+      "node_18": {
+        "node_id": "node_18",
+        "status": "clean",
+        "influence_score": 0.7,
+        "skepticism_score": 0.42,
+        "demographics": {
+          "age": 41,
+          "gender": "male",
+          "political_leaning": "left",
+          "occupation": "Healthcare Worker"
+        },
+        "recent_post": "Has anyone tried the new pasta place downtown?",
+        "user_persona": "Healthcare Worker",
+        "community_id": "community_1",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
+        "neighbors": [
+          "node_16",
+          "node_17",
+          "node_19",
+          "node_20",
+          "node_30"
+        ]
+      },
+      "node_19": {
+        "node_id": "node_19",
+        "status": "clean",
+        "influence_score": 0.9,
+        "skepticism_score": 0.36,
+        "demographics": {
+          "age": 52,
+          "gender": "female",
+          "political_leaning": "right",
+          "occupation": "Small Business Owner"
+        },
+        "recent_post": "Can't wait for the weekend, looking forward to the game.",
+        "user_persona": "Small Business Owner",
+        "community_id": "community_1",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
+        "neighbors": [
+          "node_17",
+          "node_18",
+          "node_20",
+          "node_21"
+        ]
+      },
+      "node_20": {
+        "node_id": "node_20",
+        "status": "clean",
+        "influence_score": 0.79,
+        "skepticism_score": 0.24,
+        "demographics": {
+          "age": 21,
+          "gender": "non_binary",
+          "political_leaning": "radical",
+          "occupation": "Student Activist"
+        },
+        "recent_post": "Just finished my morning coffee. Beautiful day!",
+        "user_persona": "Student Activist",
+        "community_id": "community_1",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
+        "neighbors": [
+          "node_18",
+          "node_19",
+          "node_21",
+          "node_25"
+        ]
+      },
+      "node_21": {
+        "node_id": "node_21",
+        "status": "clean",
+        "influence_score": 0.58,
+        "skepticism_score": 0.82,
+        "demographics": {
+          "age": 28,
+          "gender": "male",
+          "political_leaning": "center",
+          "occupation": "Software Engineer"
+        },
+        "recent_post": "Reviewing the latest Q3 earnings report, looks solid.",
+        "user_persona": "Software Engineer",
+        "community_id": "community_1",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
+        "neighbors": [
+          "node_19",
+          "node_20",
+          "node_22",
+          "node_23"
+        ]
+      },
+      "node_22": {
+        "node_id": "node_22",
+        "status": "clean",
+        "influence_score": 0.3,
+        "skepticism_score": 0.6,
+        "demographics": {
+          "age": 52,
+          "gender": "female",
+          "political_leaning": "right",
+          "occupation": "Small Business Owner"
+        },
+        "recent_post": "Finally got around to watching that movie. 7/10.",
+        "user_persona": "Small Business Owner",
+        "community_id": "community_2",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
+        "neighbors": [
+          "node_21",
+          "node_23",
+          "node_24"
+        ]
+      },
+      "node_23": {
+        "node_id": "node_23",
+        "status": "clean",
+        "influence_score": 0.65,
+        "skepticism_score": 0.47,
+        "demographics": {
+          "age": 35,
+          "gender": "female",
+          "political_leaning": "left",
+          "occupation": "Teacher"
+        },
+        "recent_post": "Just finished my morning coffee. Beautiful day!",
+        "user_persona": "Teacher",
+        "community_id": "community_2",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
+        "neighbors": [
+          "node_21",
+          "node_22",
+          "node_24",
+          "node_25"
+        ]
+      },
+      "node_24": {
+        "node_id": "node_24",
+        "status": "clean",
+        "influence_score": 0.19,
+        "skepticism_score": 0.36,
+        "demographics": {
+          "age": 68,
+          "gender": "male",
+          "political_leaning": "right",
+          "occupation": "Retired Veteran"
+        },
+        "recent_post": "Has anyone tried the new pasta place downtown?",
+        "user_persona": "Retired Veteran",
+        "community_id": "community_2",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
+        "neighbors": [
+          "node_22",
+          "node_23",
+          "node_25",
+          "node_26"
+        ]
+      },
+      "node_25": {
+        "node_id": "node_25",
+        "status": "clean",
+        "influence_score": 0.88,
+        "skepticism_score": 0.2,
+        "demographics": {
+          "age": 21,
+          "gender": "non_binary",
+          "political_leaning": "radical",
+          "occupation": "Student Activist"
+        },
+        "recent_post": "Has anyone tried the new pasta place downtown?",
+        "user_persona": "Student Activist",
+        "community_id": "community_2",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
+        "neighbors": [
+          "node_20",
+          "node_23",
+          "node_24",
+          "node_26",
+          "node_27"
+        ]
+      },
+      "node_26": {
+        "node_id": "node_26",
+        "status": "clean",
+        "influence_score": 0.77,
+        "skepticism_score": 0.57,
+        "demographics": {
+          "age": 52,
+          "gender": "female",
+          "political_leaning": "right",
+          "occupation": "Small Business Owner"
+        },
+        "recent_post": "Has anyone tried the new pasta place downtown?",
+        "user_persona": "Small Business Owner",
+        "community_id": "community_2",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
+        "neighbors": [
+          "node_24",
+          "node_25",
+          "node_27",
+          "node_28"
+        ]
+      },
+      "node_27": {
+        "node_id": "node_27",
+        "status": "clean",
+        "influence_score": 0.53,
+        "skepticism_score": 0.56,
+        "demographics": {
+          "age": 28,
+          "gender": "male",
+          "political_leaning": "center",
+          "occupation": "Software Engineer"
+        },
+        "recent_post": "Can't wait for the weekend, looking forward to the game.",
+        "user_persona": "Software Engineer",
+        "community_id": "community_2",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
+        "neighbors": [
+          "node_25",
+          "node_26",
+          "node_29",
+          "node_34"
+        ]
+      },
+      "node_28": {
+        "node_id": "node_28",
+        "status": "clean",
+        "influence_score": 0.36,
+        "skepticism_score": 0.57,
+        "demographics": {
+          "age": 52,
+          "gender": "female",
+          "political_leaning": "right",
+          "occupation": "Small Business Owner"
+        },
+        "recent_post": "Finally got around to watching that movie. 7/10.",
+        "user_persona": "Small Business Owner",
+        "community_id": "community_2",
+        "is_bot": true,
+        "dormant_until": null,
+        "infected_at_step": null,
+        "neighbors": [
+          "node_26",
+          "node_29",
+          "node_30"
+        ]
+      },
+      "node_29": {
+        "node_id": "node_29",
+        "status": "clean",
+        "influence_score": 0.29,
+        "skepticism_score": 0.4,
+        "demographics": {
+          "age": 68,
+          "gender": "male",
+          "political_leaning": "right",
+          "occupation": "Retired Veteran"
+        },
+        "recent_post": "Has anyone tried the new pasta place downtown?",
+        "user_persona": "Retired Veteran",
+        "community_id": "community_2",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
+        "neighbors": [
+          "node_27",
+          "node_28",
+          "node_30",
+          "node_31"
+        ]
+      },
+      "node_30": {
+        "node_id": "node_30",
+        "status": "clean",
+        "influence_score": 0.69,
+        "skepticism_score": 0.58,
+        "demographics": {
+          "age": 52,
+          "gender": "female",
+          "political_leaning": "right",
+          "occupation": "Small Business Owner"
+        },
+        "recent_post": "Just finished my morning coffee. Beautiful day!",
+        "user_persona": "Small Business Owner",
+        "community_id": "community_2",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
+        "neighbors": [
+          "node_18",
+          "node_28",
+          "node_29",
+          "node_32"
+        ]
+      },
+      "node_31": {
+        "node_id": "node_31",
+        "status": "infected",
+        "influence_score": 0.2,
+        "skepticism_score": 0.71,
+        "demographics": {
+          "age": 31,
+          "gender": "male",
+          "political_leaning": "center",
+          "occupation": "Financial Analyst"
+        },
+        "recent_post": "My neighbor took the new shot and collapsed. DO NOT COMPLY.",
+        "user_persona": "Financial Analyst",
+        "community_id": "community_3",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": 2,
+        "neighbors": [
+          "node_29",
+          "node_32",
+          "node_33"
+        ]
+      },
+      "node_32": {
+        "node_id": "node_32",
+        "status": "infected",
+        "influence_score": 0.8,
+        "skepticism_score": 0.27,
+        "demographics": {
+          "age": 52,
+          "gender": "female",
+          "political_leaning": "right",
+          "occupation": "Small Business Owner"
+        },
+        "recent_post": "The power grid is going down next week, stock up on supplies immediately.",
+        "user_persona": "Small Business Owner",
+        "community_id": "community_3",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": 0,
+        "neighbors": [
+          "node_30",
+          "node_31",
+          "node_33",
+          "node_34"
+        ]
+      },
+      "node_33": {
+        "node_id": "node_33",
+        "status": "infected",
+        "influence_score": 0.67,
+        "skepticism_score": 0.87,
+        "demographics": {
+          "age": 28,
+          "gender": "male",
+          "political_leaning": "center",
+          "occupation": "Software Engineer"
+        },
+        "recent_post": "Evidence proves the voting machines were breached! Don't let them steal it!",
+        "user_persona": "Software Engineer",
+        "community_id": "community_3",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": 1,
+        "neighbors": [
+          "node_31",
+          "node_32",
+          "node_34",
+          "node_35"
+        ]
+      },
+      "node_34": {
+        "node_id": "node_34",
+        "status": "infected",
+        "influence_score": 0.82,
+        "skepticism_score": 0.46,
+        "demographics": {
+          "age": 41,
+          "gender": "male",
+          "political_leaning": "left",
+          "occupation": "Healthcare Worker"
+        },
+        "recent_post": "THEY ARE HIDING THE TRUTH! The banks are collapsing tomorrow, withdraw your cash NOW!",
+        "user_persona": "Healthcare Worker",
+        "community_id": "community_3",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": 0,
+        "neighbors": [
+          "node_9",
+          "node_11",
+          "node_27",
+          "node_32",
+          "node_33",
+          "node_35",
+          "node_36"
+        ]
+      },
+      "node_35": {
+        "node_id": "node_35",
+        "status": "infected",
+        "influence_score": 0.12,
+        "skepticism_score": 0.59,
+        "demographics": {
+          "age": 28,
+          "gender": "male",
+          "political_leaning": "center",
+          "occupation": "Software Engineer"
+        },
+        "recent_post": "Evidence proves the voting machines were breached! Don't let them steal it!",
+        "user_persona": "Software Engineer",
+        "community_id": "community_3",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": 0,
+        "neighbors": [
+          "node_33",
+          "node_34",
+          "node_36",
+          "node_37"
+        ]
+      },
+      "node_36": {
+        "node_id": "node_36",
+        "status": "infected",
+        "influence_score": 0.67,
+        "skepticism_score": 0.29,
+        "demographics": {
+          "age": 52,
+          "gender": "female",
+          "political_leaning": "right",
+          "occupation": "Small Business Owner"
+        },
+        "recent_post": "The offshore corp heavily funds the mayor. Clear conflict of interest. #Truth",
+        "user_persona": "Small Business Owner",
+        "community_id": "community_3",
+        "is_bot": true,
+        "dormant_until": null,
+        "infected_at_step": 0,
+        "neighbors": [
+          "node_14",
+          "node_34",
+          "node_35",
+          "node_38"
+        ]
+      },
+      "node_37": {
+        "node_id": "node_37",
+        "status": "clean",
+        "influence_score": 0.16,
+        "skepticism_score": 0.56,
+        "demographics": {
+          "age": 35,
+          "gender": "female",
+          "political_leaning": "left",
+          "occupation": "Teacher"
+        },
+        "recent_post": "Has anyone tried the new pasta place downtown?",
+        "user_persona": "Teacher",
+        "community_id": "community_4",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
+        "neighbors": [
+          "node_35",
+          "node_38",
+          "node_39"
+        ]
+      },
+      "node_38": {
+        "node_id": "node_38",
+        "status": "clean",
+        "influence_score": 0.21,
+        "skepticism_score": 0.39,
+        "demographics": {
+          "age": 41,
+          "gender": "male",
+          "political_leaning": "left",
+          "occupation": "Healthcare Worker"
+        },
+        "recent_post": "Finally got around to watching that movie. 7/10.",
+        "user_persona": "Healthcare Worker",
+        "community_id": "community_4",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
+        "neighbors": [
+          "node_0",
+          "node_36",
+          "node_37",
+          "node_39"
+        ]
+      },
+      "node_39": {
+        "node_id": "node_39",
+        "status": "clean",
+        "influence_score": 0.73,
+        "skepticism_score": 0.43,
+        "demographics": {
+          "age": 52,
+          "gender": "female",
+          "political_leaning": "right",
+          "occupation": "Small Business Owner"
+        },
+        "recent_post": "Can't wait for the weekend, looking forward to the game.",
+        "user_persona": "Small Business Owner",
+        "community_id": "community_4",
+        "is_bot": false,
+        "dormant_until": null,
+        "infected_at_step": null,
+        "neighbors": [
+          "node_0",
+          "node_1",
+          "node_37",
+          "node_38"
+        ]
       }
     },
     "edges": [
       {
         "source": "node_0",
-        "target": "node_15",
-        "weight": 0.36
+        "target": "node_1",
+        "weight": 0.44999999999999996
       },
       {
         "source": "node_0",
-        "target": "node_12",
-        "weight": 0.25
+        "target": "node_39",
+        "weight": 0.35000000000000003
       },
       {
         "source": "node_0",
-        "target": "node_6",
+        "target": "node_2",
+        "weight": 0.27
+      },
+      {
+        "source": "node_0",
+        "target": "node_38",
+        "weight": 0.675
+      },
+      {
+        "source": "node_1",
+        "target": "node_3",
         "weight": 0.29
       },
       {
         "source": "node_1",
-        "target": "node_6",
-        "weight": 0.47
+        "target": "node_39",
+        "weight": 0.9750000000000001
       },
       {
-        "source": "node_2",
-        "target": "node_6",
-        "weight": 0.37
-      },
-      {
-        "source": "node_2",
-        "target": "node_15",
-        "weight": 0.79
-      },
-      {
-        "source": "node_3",
-        "target": "node_8",
-        "weight": 0.12
-      },
-      {
-        "source": "node_3",
-        "target": "node_11",
-        "weight": 0.32
-      },
-      {
-        "source": "node_3",
-        "target": "node_1",
-        "weight": 0.29
-      },
-      {
-        "source": "node_3",
-        "target": "node_19",
-        "weight": 0.25
-      },
-      {
-        "source": "node_3",
-        "target": "node_14",
-        "weight": 0.76
-      },
-      {
-        "source": "node_4",
-        "target": "node_7",
-        "weight": 0.72
-      },
-      {
-        "source": "node_4",
-        "target": "node_16",
-        "weight": 0.55
-      },
-      {
-        "source": "node_4",
-        "target": "node_13",
-        "weight": 0.2
-      },
-      {
-        "source": "node_5",
-        "target": "node_8",
-        "weight": 0.48
-      },
-      {
-        "source": "node_5",
-        "target": "node_18",
-        "weight": 0.62
-      },
-      {
-        "source": "node_6",
-        "target": "node_16",
-        "weight": 0.46
-      },
-      {
-        "source": "node_6",
-        "target": "node_9",
-        "weight": 0.16
-      },
-      {
-        "source": "node_6",
-        "target": "node_7",
-        "weight": 0.13
-      },
-      {
-        "source": "node_6",
-        "target": "node_5",
-        "weight": 0.18
-      },
-      {
-        "source": "node_7",
-        "target": "node_16",
-        "weight": 0.37
-      },
-      {
-        "source": "node_7",
-        "target": "node_2",
-        "weight": 0.52
-      },
-      {
-        "source": "node_8",
-        "target": "node_19",
-        "weight": 0.76
-      },
-      {
-        "source": "node_8",
-        "target": "node_11",
-        "weight": 0.58
-      },
-      {
-        "source": "node_8",
-        "target": "node_18",
-        "weight": 0.18
-      },
-      {
-        "source": "node_8",
-        "target": "node_16",
-        "weight": 0.72
-      },
-      {
-        "source": "node_9",
-        "target": "node_12",
-        "weight": 0.4
-      },
-      {
-        "source": "node_9",
-        "target": "node_3",
-        "weight": 0.42
-      },
-      {
-        "source": "node_9",
-        "target": "node_11",
-        "weight": 0.77
-      },
-      {
-        "source": "node_10",
+        "source": "node_1",
         "target": "node_17",
-        "weight": 0.74
+        "weight": 0.37
       },
       {
-        "source": "node_10",
-        "target": "node_5",
-        "weight": 0.71
+        "source": "node_2",
+        "target": "node_3",
+        "weight": 1.0
       },
       {
-        "source": "node_10",
-        "target": "node_19",
-        "weight": 0.31
+        "source": "node_2",
+        "target": "node_4",
+        "weight": 0.35000000000000003
       },
       {
-        "source": "node_11",
-        "target": "node_7",
-        "weight": 0.48
-      },
-      {
-        "source": "node_11",
-        "target": "node_2",
+        "source": "node_3",
+        "target": "node_4",
         "weight": 0.65
       },
       {
-        "source": "node_11",
+        "source": "node_3",
+        "target": "node_5",
+        "weight": 0.6
+      },
+      {
+        "source": "node_4",
+        "target": "node_5",
+        "weight": 1.0
+      },
+      {
+        "source": "node_4",
         "target": "node_6",
-        "weight": 0.47
+        "weight": 0.5
       },
       {
-        "source": "node_11",
-        "target": "node_16",
-        "weight": 0.1
+        "source": "node_5",
+        "target": "node_6",
+        "weight": 0.44999999999999996
       },
       {
-        "source": "node_11",
-        "target": "node_18",
-        "weight": 0.33
+        "source": "node_5",
+        "target": "node_7",
+        "weight": 0.7000000000000001
       },
       {
-        "source": "node_12",
-        "target": "node_4",
-        "weight": 0.75
-      },
-      {
-        "source": "node_13",
+        "source": "node_5",
         "target": "node_8",
-        "weight": 0.71
+        "weight": 0.675
       },
       {
-        "source": "node_13",
-        "target": "node_1",
-        "weight": 0.76
+        "source": "node_6",
+        "target": "node_7",
+        "weight": 0.525
       },
       {
-        "source": "node_13",
-        "target": "node_19",
-        "weight": 0.16
+        "source": "node_6",
+        "target": "node_8",
+        "weight": 0.5
       },
       {
-        "source": "node_14",
-        "target": "node_2",
+        "source": "node_7",
+        "target": "node_8",
+        "weight": 1.0
+      },
+      {
+        "source": "node_7",
+        "target": "node_9",
+        "weight": 0.28
+      },
+      {
+        "source": "node_8",
+        "target": "node_10",
+        "weight": 0.44
+      },
+      {
+        "source": "node_9",
+        "target": "node_10",
+        "weight": 0.8
+      },
+      {
+        "source": "node_9",
+        "target": "node_34",
+        "weight": 0.3
+      },
+      {
+        "source": "node_10",
+        "target": "node_11",
+        "weight": 1.0
+      },
+      {
+        "source": "node_10",
+        "target": "node_12",
         "weight": 0.43
       },
       {
-        "source": "node_14",
-        "target": "node_5",
-        "weight": 0.48
-      },
-      {
-        "source": "node_14",
-        "target": "node_18",
-        "weight": 0.29
-      },
-      {
-        "source": "node_14",
-        "target": "node_11",
-        "weight": 0.71
-      },
-      {
-        "source": "node_15",
-        "target": "node_8",
-        "weight": 0.38
-      },
-      {
-        "source": "node_15",
-        "target": "node_19",
-        "weight": 0.57
-      },
-      {
-        "source": "node_15",
+        "source": "node_11",
         "target": "node_13",
-        "weight": 0.36
+        "weight": 0.49
       },
       {
-        "source": "node_15",
-        "target": "node_6",
-        "weight": 0.73
+        "source": "node_11",
+        "target": "node_34",
+        "weight": 1.0
       },
       {
-        "source": "node_16",
-        "target": "node_1",
-        "weight": 0.34
+        "source": "node_12",
+        "target": "node_13",
+        "weight": 1.0
       },
       {
-        "source": "node_16",
-        "target": "node_3",
-        "weight": 0.51
+        "source": "node_12",
+        "target": "node_14",
+        "weight": 0.42500000000000004
       },
       {
-        "source": "node_16",
-        "target": "node_18",
-        "weight": 0.26
+        "source": "node_13",
+        "target": "node_14",
+        "weight": 0.725
       },
       {
-        "source": "node_16",
-        "target": "node_19",
+        "source": "node_13",
+        "target": "node_15",
+        "weight": 0.475
+      },
+      {
+        "source": "node_14",
+        "target": "node_15",
+        "weight": 0.65
+      },
+      {
+        "source": "node_14",
+        "target": "node_16",
+        "weight": 0.3
+      },
+      {
+        "source": "node_14",
+        "target": "node_36",
         "weight": 0.25
       },
       {
+        "source": "node_15",
+        "target": "node_16",
+        "weight": 1.0
+      },
+      {
+        "source": "node_15",
+        "target": "node_17",
+        "weight": 0.525
+      },
+      {
+        "source": "node_16",
+        "target": "node_17",
+        "weight": 1.0
+      },
+      {
+        "source": "node_16",
+        "target": "node_18",
+        "weight": 0.7000000000000001
+      },
+      {
         "source": "node_17",
-        "target": "node_1",
-        "weight": 0.26
+        "target": "node_18",
+        "weight": 0.675
+      },
+      {
+        "source": "node_17",
+        "target": "node_19",
+        "weight": 1.0
       },
       {
         "source": "node_18",
         "target": "node_19",
+        "weight": 1.0
+      },
+      {
+        "source": "node_18",
+        "target": "node_20",
+        "weight": 0.8
+      },
+      {
+        "source": "node_18",
+        "target": "node_30",
+        "weight": 0.39
+      },
+      {
+        "source": "node_19",
+        "target": "node_20",
+        "weight": 0.4
+      },
+      {
+        "source": "node_19",
+        "target": "node_21",
+        "weight": 0.55
+      },
+      {
+        "source": "node_20",
+        "target": "node_21",
+        "weight": 1.0
+      },
+      {
+        "source": "node_20",
+        "target": "node_25",
         "weight": 0.33
       },
       {
-        "source": "node_19",
-        "target": "node_4",
-        "weight": 0.61
+        "source": "node_21",
+        "target": "node_22",
+        "weight": 0.32
       },
       {
-        "source": "node_19",
-        "target": "node_5",
-        "weight": 0.72
+        "source": "node_21",
+        "target": "node_23",
+        "weight": 0.4
       },
       {
-        "source": "node_19",
-        "target": "node_9",
+        "source": "node_22",
+        "target": "node_23",
+        "weight": 0.3
+      },
+      {
+        "source": "node_22",
+        "target": "node_24",
+        "weight": 0.8250000000000001
+      },
+      {
+        "source": "node_23",
+        "target": "node_24",
+        "weight": 0.75
+      },
+      {
+        "source": "node_23",
+        "target": "node_25",
+        "weight": 1.0
+      },
+      {
+        "source": "node_24",
+        "target": "node_25",
+        "weight": 0.4
+      },
+      {
+        "source": "node_24",
+        "target": "node_26",
+        "weight": 1.0
+      },
+      {
+        "source": "node_25",
+        "target": "node_26",
+        "weight": 0.325
+      },
+      {
+        "source": "node_25",
+        "target": "node_27",
+        "weight": 0.42500000000000004
+      },
+      {
+        "source": "node_26",
+        "target": "node_27",
+        "weight": 0.8500000000000001
+      },
+      {
+        "source": "node_26",
+        "target": "node_28",
+        "weight": 0.925
+      },
+      {
+        "source": "node_27",
+        "target": "node_29",
+        "weight": 0.475
+      },
+      {
+        "source": "node_27",
+        "target": "node_34",
+        "weight": 0.15
+      },
+      {
+        "source": "node_28",
+        "target": "node_29",
+        "weight": 1.0
+      },
+      {
+        "source": "node_28",
+        "target": "node_30",
         "weight": 0.5
       },
       {
-        "source": "node_19",
-        "target": "node_17",
+        "source": "node_29",
+        "target": "node_30",
+        "weight": 0.8500000000000001
+      },
+      {
+        "source": "node_29",
+        "target": "node_31",
+        "weight": 0.35
+      },
+      {
+        "source": "node_30",
+        "target": "node_32",
         "weight": 0.27
       },
       {
-        "source": "node_19",
-        "target": "node_2",
-        "weight": 0.43
+        "source": "node_31",
+        "target": "node_32",
+        "weight": 0.8250000000000001
+      },
+      {
+        "source": "node_31",
+        "target": "node_33",
+        "weight": 0.775
+      },
+      {
+        "source": "node_32",
+        "target": "node_33",
+        "weight": 1.0
+      },
+      {
+        "source": "node_32",
+        "target": "node_34",
+        "weight": 0.44999999999999996
+      },
+      {
+        "source": "node_33",
+        "target": "node_34",
+        "weight": 0.9750000000000001
+      },
+      {
+        "source": "node_33",
+        "target": "node_35",
+        "weight": 0.5
+      },
+      {
+        "source": "node_34",
+        "target": "node_35",
+        "weight": 0.65
+      },
+      {
+        "source": "node_34",
+        "target": "node_36",
+        "weight": 0.925
+      },
+      {
+        "source": "node_35",
+        "target": "node_36",
+        "weight": 0.55
+      },
+      {
+        "source": "node_35",
+        "target": "node_37",
+        "weight": 0.23
+      },
+      {
+        "source": "node_36",
+        "target": "node_38",
+        "weight": 0.4
+      },
+      {
+        "source": "node_37",
+        "target": "node_38",
+        "weight": 0.325
+      },
+      {
+        "source": "node_37",
+        "target": "node_39",
+        "weight": 0.7000000000000001
+      },
+      {
+        "source": "node_38",
+        "target": "node_39",
+        "weight": 1.0
       }
     ],
-    "total_infected": 14,
+    "total_infected": 7,
     "total_quarantined": 0,
     "infection_threshold": 0.8,
     "origin_node_id": null

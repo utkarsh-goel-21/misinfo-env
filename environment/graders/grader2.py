@@ -1,134 +1,71 @@
+import networkx as nx
 from environment.models import Reward
-from environment.tasks.task2_tracing import Task2Tracing
-
 
 class Grader2:
     """
-    Grader for Task 2 — Origin Tracing
-
-    Scoring breakdown:
-    - Exact origin match:          0.60
-    - Origin in neighborhood:      0.30
-      (guess is direct neighbor of origin)
-    - Efficiency bonus:            0.10
-      (fewer trace steps = higher bonus)
-    - Threshold breach penalty:   -0.20
-      (if infection crossed threshold)
-
-    Formula:
-      base = 0.60 (exact) or 0.30 (neighbor) or 0.0
-      efficiency = 0.10 * (1 - traces_used/max_traces)
-      breach_penalty = 0.20 if threshold breached else 0.0
-      score = clamp(base + efficiency - breach_penalty, 0.0, 1.0)
+    Grader for Task 2: Origin Tracing & Causal Reconstruction
+    Scores the agent based on identifying the true origin 
+    node and the validity of the submitted causal chain.
     """
+    def grade(self, task, cumulative_penalty: float) -> Reward:
+        truth = task.get_ground_truth()
+        actual_origin = truth["origin_node"]
+        submitted_chain = truth["submitted_chain"]
+        
+        # 1. Did they submit anything?
+        if not submitted_chain:
+            return Reward(
+                score=-1.0,
+                delta=0.0,
+                done=True,
+                success=False,
+                partial_credits={"brier_calibration_penalty": cumulative_penalty},
+                penalty=cumulative_penalty,
+                feedback="Failed to submit causal chain before episode ended."
+            )
+            
+        # 2. Score Origin Node (First node in chain)
+        agent_origin = submitted_chain[0].get("from", "")
+        origin_score = 0.6 if agent_origin == actual_origin else 0.0
 
-    def grade(
-        self,
-        task: Task2Tracing,
-        cumulative_penalties: float = 0.0
-    ) -> Reward:
-
-        ground_truth = task.get_ground_truth()
-        origin = ground_truth["origin_node"]
-        origin_neighbors = set(ground_truth["origin_neighbors"])
-        agent_guess = ground_truth["agent_guess"]
-
-        # Base score
-        exact_match = agent_guess == origin
-        neighbor_match = (
-            agent_guess in origin_neighbors
-            and not exact_match
-        )
-
-        if exact_match:
-            base_score = 0.60
-        elif neighbor_match:
-            base_score = 0.30
-        else:
-            base_score = 0.0
-
-        # Efficiency bonus
-        traces_used = len(task.trace_history)
-        max_traces = task.MAX_STEPS
-        efficiency = 0.10 * (
-            1.0 - min(traces_used, max_traces) / max_traces
-        )
-
-        # Threshold breach penalty
-        breach_penalty = (
-            0.20 if task.graph.threshold_breached() else 0.0
-        )
-
-        # Final score
-        raw_score = base_score + efficiency - breach_penalty
-        final_score = round(max(0.0, min(1.0, raw_score)), 4)
-
-        success = exact_match and not task.graph.threshold_breached()
-
-        partial_credits = {
-            "exact_match": exact_match,
-            "neighbor_match": neighbor_match,
-            "base_score": base_score,
-            "efficiency_bonus": round(efficiency, 4),
-            "breach_penalty": breach_penalty,
-            "traces_used": traces_used,
-            "agent_guess": agent_guess,
-            "correct_origin": origin
-        }
-
-        feedback = self._build_feedback(
-            exact_match,
-            neighbor_match,
-            agent_guess,
-            origin,
-            task.graph.threshold_breached(),
-            success
-        )
+        # 3. Score Edge Validity (Graph Edit Distance proxy via Intersection)
+        valid_edges = 0
+        total_submitted_edges = len(submitted_chain)
+        
+        for edge in submitted_chain:
+            u = edge.get("from")
+            v = edge.get("to")
+            
+            # Check if this edge exists in graph and both nodes are infected
+            if u in task.graph.adjacency and v in task.graph.adjacency[u]:
+                if task.graph.nodes[u].status.value == "infected" and task.graph.nodes[v].status.value == "infected":
+                    valid_edges += 1
+                    
+        edge_score = (valid_edges / max(1, total_submitted_edges)) * 0.4
+        
+        base_score = origin_score + edge_score
+        
+        # Efficiency Bonus (Exponential as per Claude's suggestion)
+        steps_taken = task.step_count
+        max_steps = task.MAX_STEPS
+        efficiency_bonus = 0.15 * ((1 - (steps_taken / max_steps)) ** 2)
+        
+        final_score = base_score + efficiency_bonus - cumulative_penalty
+        final_score = max(-1.0, min(1.0, final_score))
+        
+        success = (agent_origin == actual_origin) and (valid_edges == total_submitted_edges)
 
         return Reward(
-            score=final_score,
+            score=round(final_score, 4),
             delta=0.0,
             done=True,
             success=success,
-            partial_credits=partial_credits,
-            penalty=cumulative_penalties,
-            feedback=feedback
-        )
-
-    def _build_feedback(
-        self,
-        exact: bool,
-        neighbor: bool,
-        guess: str,
-        origin: str,
-        breached: bool,
-        success: bool
-    ) -> str:
-        breach_msg = (
-            " WARNING: Infection threshold breached during investigation."
-            if breached else ""
-        )
-        if success:
-            return (
-                f"SUCCESS: Correctly identified origin node {origin}."
-                f"{breach_msg}"
-            )
-        if exact and breached:
-            return (
-                f"PARTIAL: Correct origin {origin} but threshold breached."
-                f"{breach_msg}"
-            )
-        if neighbor:
-            return (
-                f"PARTIAL: Guessed {guess} which neighbors origin {origin}. "
-                f"Close but not exact.{breach_msg}"
-            )
-        if not guess:
-            return (
-                f"FAIL: No origin guess submitted. "
-                f"Correct origin was {origin}.{breach_msg}"
-            )
-        return (
-            f"FAIL: Guessed {guess} but correct origin was {origin}."
-            f"{breach_msg}"
+            partial_credits={
+                "origin_score": origin_score,
+                "edge_validity_score": round(edge_score, 4),
+                "efficiency_bonus": round(efficiency_bonus, 4),
+                "brier_calibration_penalty": round(cumulative_penalty, 4)
+            },
+            penalty=cumulative_penalty,
+            feedback=f"Origin guess: {'Correct' if origin_score > 0 else 'Incorrect'}. {valid_edges}/{total_submitted_edges} edges matched valid infected paths."
         )
