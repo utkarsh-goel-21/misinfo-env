@@ -36,6 +36,9 @@ import sys
 import time
 
 from openai import OpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from environment.env import MisinfoEnv
 from environment.models import Action, ActionType, Observation
