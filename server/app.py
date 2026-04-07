@@ -129,43 +129,159 @@ app.add_middleware(
 
 @app.get("/", tags=["system"])
 async def root():
-    """Professional landing page for the environment."""
+    """Premium landing page for the environment."""
     from fastapi.responses import HTMLResponse
     
     html_content = """
-    <html>
-        <head>
-            <title>🛡️ Misinfo Containment Environment</title>
-            <style>
-                body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #333; max-width: 800px; margin: 0 auto; padding: 40px; background-color: #f4f7f9; }
-                .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); border-top: 5px solid #2563eb; }
-                h1 { color: #1e3a8a; margin-top: 0; }
-                .status { display: inline-block; padding: 4px 12px; border-radius: 20px; background: #dcfce7; color: #166534; font-weight: bold; font-size: 0.9em; margin-bottom: 20px; }
-                .links { margin-top: 30px; display: flex; gap: 15px; }
-                .btn { text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: 500; transition: all 0.2s; }
-                .btn-primary { background: #2563eb; color: white; }
-                .btn-primary:hover { background: #1d4ed8; }
-                .btn-outline { border: 1px solid #cbd5e1; color: #475569; }
-                .btn-outline:hover { background: #f8fafc; }
-                code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; }
-            </style>
-        </head>
-        <body>
-            <div class="card">
-                <div class="status">● SERVER ACTIVE</div>
-                <h1>🛡️ Misinfo Containment Env</h1>
-                <p>Welcome to the <strong>OpenEnv-compliant</strong> simulation environment for misinformation detection and containment.</p>
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>🛡️ Misinfo Containment | OpenEnv</title>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+        <script src="https://unpkg.com/lucide@latest"></script>
+        <style>
+            :root {
+                --primary: #3b82f6;
+                --primary-glow: rgba(59, 130, 246, 0.5);
+                --success: #10b981;
+                --bg: #0f172a;
+                --card-bg: rgba(30, 41, 59, 0.7);
+                --text-main: #f8fafc;
+                --text-muted: #94a3b8;
+            }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { 
+                font-family: 'Inter', sans-serif; 
+                background: radial-gradient(circle at top right, #1e293b, #0f172a 60%);
+                color: var(--text-main);
+                min-height: 100vh;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                overflow-x: hidden;
+            }
+            h1, h2, h3 { font-family: 'Outfit', sans-serif; }
+            
+            .container { 
+                max-width: 900px; width: 90%; 
+                margin: 40px auto; 
+                animation: fadeIn 0.8s ease-out;
+            }
+            @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+            .hero-card {
+                background: var(--card-bg);
+                backdrop-filter: blur(12px);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 24px;
+                padding: 60px 40px;
+                text-align: center;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+                position: relative;
+            }
+            .hero-card::before {
+                content: ''; position: absolute; top: -1px; left: 50%; transform: translateX(-50%);
+                width: 40%; height: 2px; background: linear-gradient(90deg, transparent, var(--primary), transparent);
+            }
+
+            .badge {
+                display: inline-flex; align-items: center; gap: 8px;
+                background: rgba(16, 185, 129, 0.1);
+                color: var(--success);
+                padding: 6px 16px; border-radius: 99px;
+                font-size: 0.8rem; font-weight: 600; text-transform: uppercase;
+                letter-spacing: 1px; margin-bottom: 24px;
+                border: 1px solid rgba(16, 185, 129, 0.2);
+            }
+            .dot { width: 8px; height: 8px; background: var(--success); border-radius: 50%; animation: pulse 2s infinite; }
+            @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); } 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); } }
+
+            h1 { font-size: 3rem; font-weight: 700; margin-bottom: 16px; letter-spacing: -1px; }
+            .subtitle { color: var(--text-muted); font-size: 1.1rem; max-width: 600px; margin: 0 auto 40px; line-height: 1.6; }
+
+            .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 40px; }
+            .task-item {
+                background: rgba(255, 255, 255, 0.03);
+                padding: 24px; border-radius: 16px;
+                border: 1px solid rgba(255, 255, 255, 0.05);
+                transition: all 0.3s ease;
+            }
+            .task-item:hover { transform: translateY(-5px); border-color: var(--primary); background: rgba(59, 130, 246, 0.05); }
+            .task-item i { color: var(--primary); margin-bottom: 12px; }
+            .task-item h3 { font-size: 1rem; margin-bottom: 8px; }
+            .task-item p { font-size: 0.8rem; color: var(--text-muted); }
+
+            .actions { display: flex; gap: 16px; justify-content: center; }
+            .btn {
+                text-decoration: none; padding: 14px 28px; border-radius: 12px;
+                font-weight: 600; transition: all 0.2s; display: flex; align-items: center; gap: 10px;
+            }
+            .btn-primary { 
+                background: var(--primary); color: white; 
+                box-shadow: 0 10px 15px -3px var(--primary-glow);
+            }
+            .btn-primary:hover { transform: scale(1.02); box-shadow: 0 20px 25px -5px var(--primary-glow); }
+            
+            .btn-secondary { 
+                background: rgba(255, 255, 255, 0.05); color: white; 
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+            .btn-secondary:hover { background: rgba(255, 255, 255, 0.1); }
+
+            footer { margin-top: 40px; color: var(--text-muted); font-size: 0.8rem; letter-spacing: 0.5px; }
+            
+            @media (max-width: 768px) {
+                .grid { grid-template-columns: 1fr; }
+                h1 { font-size: 2.2rem; }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <div class="hero-card">
+                <div class="badge"><span class="dot"></span> Environment Ready</div>
+                <h1>Misinfo Containment</h1>
+                <p class="subtitle">A robust social network simulation for evaluating AI Agent reasoning in trust & safety environments.</p>
                 
-                <p>This server facilitates AI agent evaluation across three tasks: <code>Detection</code>, <code>Tracing</code>, and <code>Containment</code>.</p>
-                
-                <div class="links">
-                    <a href="/health" class="btn btn-primary">Check Health</a>
-                    <a href="/tasks" class="btn btn-outline">Available Tasks</a>
-                    <a href="/docs" class="btn btn-outline">API Documentation</a>
+                <div class="grid">
+                    <div class="task-item">
+                        <i data-lucide="search"></i>
+                        <h3>Detection</h3>
+                        <p>Identifying infected users in frozen snapshots.</p>
+                    </div>
+                    <div class="task-item">
+                        <i data-lucide="git-branch"></i>
+                        <h3>Tracing</h3>
+                        <p>Locating Patient Zero in active outbreaks.</p>
+                    </div>
+                    <div class="task-item">
+                        <i data-lucide="shield-check"></i>
+                        <h3>Containment</h3>
+                        <p>Strategic isolation of high-impact nodes.</p>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <a href="/health" class="btn btn-primary">
+                        <i data-lucide="activity"></i> Check Health
+                    </a>
+                    <a href="/tasks" class="btn btn-secondary">
+                        <i data-lucide="list"></i> View API
+                    </a>
+                    <a href="/docs" class="btn btn-secondary">
+                        <i data-lucide="book-open"></i> Docs
+                    </a>
                 </div>
             </div>
-            <p style="text-align: center; color: #94a3b8; font-size: 0.8em; margin-top: 20px;">Built for the OpenEnv Hackathon Benchmark</p>
-        </body>
+            <footer>POWERED BY OPENENV & LLAMA 3.3</footer>
+        </div>
+        <script>lucide.createIcons();</script>
+    </body>
     </html>
     """
     return HTMLResponse(content=html_content)
