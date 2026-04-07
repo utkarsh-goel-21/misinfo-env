@@ -1,3 +1,14 @@
+---
+title: Misinfo Containment Env
+emoji: 🛡️
+colorFrom: red
+colorTo: blue
+sdk: docker
+pinned: false
+license: mit
+short_description: OpenEnv misinformation containment simulation.
+---
+
 # Misinformation Containment Environment
 
 [![OpenEnv Compatible](https://img.shields.io/badge/OpenEnv-Compatible-green)](https://openenv.ai)
