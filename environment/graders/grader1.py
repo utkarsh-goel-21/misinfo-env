@@ -37,9 +37,9 @@ class Grader1:
         max_steps = task.MAX_STEPS
         efficiency = (max_steps - steps_used) / max_steps if max_steps > 0 else 0.0
 
-        # Composite score
+        # Composite score must be strictly (0, 1) to pass validation
         score = (tpr * 0.50) - (fpr_penalty * 0.20) - (avg_brier * 0.15) + (efficiency * 0.15)
-        score = max(-1.0, min(1.0, round(score, 4)))
+        score = max(0.01, min(0.99, round(score, 4)))
 
         success = tpr >= 0.80 and false_positives <= 2
 

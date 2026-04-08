@@ -19,7 +19,7 @@ class Grader2:
         # ── 1. No submission penalty ──
         if not submitted_chain:
             return Reward(
-                score=-0.5,
+                score=0.01,
                 delta=0.0,
                 done=True,
                 success=False,
@@ -80,7 +80,7 @@ class Grader2:
 
         # ── Composite ──
         final_score = origin_score + chain_score + containment_score + efficiency - brier_penalty
-        final_score = max(-1.0, min(1.0, round(final_score, 4)))
+        final_score = max(0.01, min(0.99, round(final_score, 4)))
 
         success = origin_correct and chain_score >= 0.20
 
