@@ -357,23 +357,29 @@ async def state():
     return env.state()
 
 
+import asyncio
+
 @app.post("/benchmark", tags=["system"])
 async def benchmark():
-    """Runs a deterministic episode to verify environment integrity."""
-    test_env = MisinfoEnv(task_id="task1_detection", seed=42)
-    test_env.reset()
+    """Runs a deterministic episode to verify environment integrity visually against the global state."""
+    global _env
+    if _env is None or _env.task_id != "task1_detection":
+        _env = MisinfoEnv(task_id="task1_detection", seed=42)
     
-    # Perform deterministic actions
+    _env.reset()
+    
+    # Perform deterministic actions slowly so the UI updates
     test_nodes = ["node_0", "node_1", "node_2", "node_3", "node_4"]
     for node_id in test_nodes:
         # Inspect
-        test_env.step(Action(action_type=ActionType.inspect, target_node_id=node_id, confidence=1.0))
+        _env.step(Action(action_type=ActionType.inspect, target_node_id=node_id, confidence=1.0))
+        await asyncio.sleep(0.8)
         # Quarantine
-        test_env.step(Action(action_type=ActionType.quarantine, target_node_id=node_id, confidence=0.8))
+        _env.step(Action(action_type=ActionType.quarantine, target_node_id=node_id, confidence=0.8))
+        await asyncio.sleep(0.8)
     
-    final_state = test_env.state()
-    # Grader call for final score
-    reward = test_env.grader.grade(test_env.task, test_env.cumulative_penalty)
+    final_state = _env.state()
+    reward = _env.grader.grade(_env.task, _env.cumulative_penalty)
     
     return {
         "status": "success",

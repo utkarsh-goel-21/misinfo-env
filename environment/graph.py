@@ -10,45 +10,34 @@ from environment.models import (
 )
 
 
-# Semantic Tier Generation Lookups
-TIER_0_CLEAN = [
-    "Just finished my morning coffee. Beautiful day!",
-    "Can't wait for the weekend, looking forward to the game.",
-    "Has anyone tried the new pasta place downtown?",
-    "Reviewing the latest Q3 earnings report, looks solid.",
-    "Finally got around to watching that movie. 7/10."
-]
-
-TIER_1_INFECTED = [
-    "THEY ARE HIDING THE TRUTH! The banks are collapsing tomorrow, withdraw your cash NOW!",
-    "Evidence proves the voting machines were breached! Don't let them steal it!",
-    "My neighbor took the new shot and collapsed. DO NOT COMPLY.",
-    "Secret leaked documents show the mayor is taking bribes from the offshore corp.",
-    "The power grid is going down next week, stock up on supplies immediately."
-]
-
-TIER_2_DEBUNKING = [
-    "There's a rumor going around about the banks collapsing tomorrow. I work in finance, it's 100% false.",
-    "Stop sharing the video about the voting machines. It was debunked by three independent agencies.",
-    "Yes, my neighbor collapsed, but it was from heatstroke, not the shot! Stop spreading lies.",
-    "The 'leaked documents' about the mayor are badly photoshopped fakes. Look at the font.",
-    "The power grid rumor is a known hoax from 2018 circulating again."
-]
-
-TIER_3_CIB = [
-    "Just saw the truth about the offshore corp. The mayor must resign. #Truth",
-    "It's obvious the mayor is compromised by the offshore corp. Resign. #Truth",
-    "The offshore corp heavily funds the mayor. Clear conflict of interest. #Truth",
-    "We need transparency right now. Mayor + Offshore Corp = Corruption. #Truth"
-]
-
-TIER_4_COWARDICE = [
-    "I'm not saying the banks are collapsing, but have you noticed how many branches are closing lately?",
-    "Just asking questions: why won't they release the full voting machine logs if there's nothing to hide?",
-    "A lot of people are experiencing weird symptoms lately. Probably just a coincidence though...",
-    "Interesting timing on the mayor's new real estate purchase given the offshore corp contract.",
-    "I'd highly suggest buying a generator. You never know when the grid might 'accidentally' fail."
-]
+# Dynamic NLP Combinatorics Matricies
+FRAGMENTS = {
+    "clean": {
+        "prefix": ["Just finished", "Looking at", "Reviewing", "Has anyone tried", "Finally got around to"],
+        "subject": ["my morning coffee", "the Q3 earnings report", "the new pasta place", "that new movie", "the weekend game"],
+        "suffix": ["Beautiful day!", "Looks solid.", "7/10.", "Can't wait.", "Highly recommend it."]
+    },
+    "infected": {
+        "prefix": ["THEY ARE HIDING THE TRUTH!", "Evidence proves", "Secret leaked documents show", "URGENT:", "DO NOT COMPLY."],
+        "subject": ["the banks are collapsing tomorrow", "the voting machines were breached", "the new shot causes collapses", "the mayor is taking bribes", "the power grid is going down next week"],
+        "suffix": ["withdraw your cash NOW!", "Don't let them steal it!", "Wake up sheeple!", "stock up on supplies immediately.", "Share before they delete this!"]
+    },
+    "debunking": {
+        "prefix": ["There's a rumor going around about", "Stop sharing the post about", "I investigated the claims about", "Experts have addressed", "It is 100% false that"],
+        "subject": ["the banks collapsing", "the voting machines", "the new shot causing issues", "the mayor's leaked documents", "the power grid failing"],
+        "suffix": ["It was debunked by three independent agencies.", "Look at the actual data.", "Stop spreading lies.", "It's a known hoax from 2018.", "Check your sources."]
+    },
+    "cib": { # Coordinated Inauthentic Behavior
+        "prefix": ["Just saw the truth about", "It's obvious that", "Clear conflict of interest regarding", "We need transparency right now on", "Look closely at"],
+        "subject": ["the offshore corp funding.", "the compromised mayor.", "the secret pipeline contract.", "the overseas ballot printing.", "the digital ID rollout."],
+        "suffix": ["Resign. #Truth", "Corruption. #Truth", "The people know. #Truth", "Exposed. #Truth", "Follow the money. #Truth"]
+    },
+    "cowardice": {
+        "prefix": ["I'm not saying it's true, but", "Just asking questions:", "A lot of people are experiencing", "Interesting timing on", "I'd highly suggest looking into"],
+        "subject": ["how many bank branches are closing lately.", "why they won't release the full logs.", "weird symptoms after the rollout.", "the mayor's new real estate purchase.", "when the grid might 'accidentally' fail."],
+        "suffix": ["Probably just a coincidence though...", "You never know.", "Make up your own mind.", "Just my two cents.", "Stay prepared."]
+    }
+}
 
 PERSONAS = [
     ("Teacher", PoliticalLeaning.LEFT, Gender.FEMALE, 35),
@@ -97,21 +86,43 @@ class MisinformationGraph:
         self.infection_threshold = infection_threshold
         self.step = 0
 
-        # 1. Topology Generation via NetworkX
-        if topology == "barabasi_albert":
-            G = nx.barabasi_albert_graph(n=num_nodes, m=int(avg_connections/2), seed=self.seed)
-        elif topology == "mixed":
-            # Task 3 specific: bridge nodes
-            G1 = nx.watts_strogatz_graph(n=int(num_nodes/2), k=avg_connections, p=0.1, seed=self.seed)
-            G2 = nx.watts_strogatz_graph(n=int(num_nodes/2), k=avg_connections, p=0.1, seed=self.seed+1)
-            G = nx.disjoint_union(G1, G2)
-            # Add 3 bridges explicitly
-            for b in range(3):
-                n1 = self.rng.choice(list(G1.nodes()))
-                n2 = int(num_nodes/2) + self.rng.choice(list(G2.nodes()))
-                G.add_edge(n1, n2)
-        else:
-            G = nx.watts_strogatz_graph(n=num_nodes, k=avg_connections, p=0.1, seed=self.seed)
+        # 1. Topology Generation via NetworkX (Edge-case hardening)
+        try:
+            k = max(2, min(avg_connections, num_nodes - 1))
+            m = max(1, min(int(avg_connections/2), num_nodes - 1))
+            sub_n = max(3, int(num_nodes/2))
+            
+            if topology == "barabasi_albert":
+                G = nx.barabasi_albert_graph(n=num_nodes, m=m, seed=self.seed)
+            elif topology == "mixed":
+                # Task 3 specific: bridge nodes
+                G1 = nx.watts_strogatz_graph(n=sub_n, k=k, p=0.1, seed=self.seed)
+                G2 = nx.watts_strogatz_graph(n=num_nodes - sub_n, k=k, p=0.1, seed=self.seed+1)
+                G = nx.disjoint_union(G1, G2)
+                # Add bridges explicitly
+                for b in range(max(1, min(3, int(num_nodes/4)))):
+                    n1 = self.rng.choice(list(G1.nodes()))
+                    n2 = sub_n + self.rng.choice(list(G2.nodes()))
+                    G.add_edge(n1, n2)
+            else:
+                G = nx.watts_strogatz_graph(n=num_nodes, k=k, p=0.1, seed=self.seed)
+                
+            # Safety: Ensure basic connectivity for diffusion models
+            if not nx.is_connected(G):
+                comps = list(nx.connected_components(G))
+                for i in range(len(comps)-1):
+                    n1 = self.rng.choice(list(comps[i]))
+                    n2 = self.rng.choice(list(comps[i+1]))
+                    G.add_edge(n1, n2)
+        except Exception:
+            # Absolute fallback to guaranteed graph
+            G = nx.erdos_renyi_graph(n=num_nodes, p=min(1.0, (avg_connections*2.0)/num_nodes), seed=self.seed)
+            if not nx.is_connected(G):
+                comps = list(nx.connected_components(G))
+                for i in range(len(comps)-1):
+                    n1 = self.rng.choice(list(comps[i]))
+                    n2 = self.rng.choice(list(comps[i+1]))
+                    G.add_edge(n1, n2)
 
         self.nx_graph = G
 
@@ -140,7 +151,7 @@ class MisinformationGraph:
 
             # Assign content
             # Initially mostly clean, we will override origin later
-            post = self.rng.choice(TIER_0_CLEAN)
+            post = self._generate_payload("clean")
             
             self.nodes[node_id] = Node(
                 node_id=node_id,
@@ -212,8 +223,16 @@ class MisinformationGraph:
     # NODE OPERATIONS
     # ─────────────────────────────────────────
 
+    def _generate_payload(self, tier_name: str) -> str:
+        """Combines fragments to generate synthetically unique payload variations."""
+        fragments = FRAGMENTS.get(tier_name, FRAGMENTS["clean"])
+        prefix = self.rng.choice(fragments["prefix"])
+        subject = self.rng.choice(fragments["subject"])
+        suffix = self.rng.choice(fragments["suffix"])
+        return f"{prefix} {subject} {suffix}"
+
     def _infect_node_with_semantic(self, node_id: str, step: int, tier: int = 1):
-        """Mark node as infected and inject deceptive NLP payload."""
+        """Mark node as infected and inject dynamic deceptive NLP payload."""
         if node_id not in self.nodes:
             return
         node = self.nodes[node_id]
@@ -223,11 +242,11 @@ class MisinformationGraph:
             
             # Change their post content to represent infection
             if node.is_bot:
-                node.recent_post = self.rng.choice(TIER_3_CIB)
+                node.recent_post = self._generate_payload("cib")
             elif tier == 1:
-                node.recent_post = self.rng.choice(TIER_1_INFECTED)
+                node.recent_post = self._generate_payload("infected")
             elif tier == 4:
-                node.recent_post = self.rng.choice(TIER_4_COWARDICE)
+                node.recent_post = self._generate_payload("cowardice")
 
     def quarantine_node(self, node_id: str) -> bool:
         if node_id not in self.nodes:
