@@ -335,3 +335,39 @@ class MisinformationGraph:
             infection_threshold=self.infection_threshold,
             origin_node_id=None if hide_origin else self.origin_node_id
         )
+
+    def remap_edges(self, migration_rate: float = 0.1):
+        """Dynamic Topology: Simulates users migrating away from quarantined nodes."""
+        to_remove = []
+        to_add = []
+        for edge in self.edges:
+            src = self.nodes.get(edge.source)
+            tgt = self.nodes.get(edge.target)
+            if src and tgt:
+                # If either is quarantined or removed, small chance the edge breaks and remaps
+                if src.status in [NodeStatus.quarantined, NodeStatus.removed] or tgt.status in [NodeStatus.quarantined, NodeStatus.removed]:
+                    if self.rng.random() < migration_rate:
+                        to_remove.append(edge)
+                        # Find a random infected node to reconnect to (alt-hub)
+                        infected_nodes = self.get_infected_nodes()
+                        if infected_nodes:
+                            new_tgt = self.rng.choice(infected_nodes)
+                            # The node that is NOT quarantined remaps
+                            clean_node_id = edge.source if tgt.status in [NodeStatus.quarantined, NodeStatus.removed] else edge.target
+                            if clean_node_id != new_tgt:
+                                to_add.append(Edge(source=clean_node_id, target=new_tgt, weight=self.rng.uniform(0.1, 0.4)))
+                                
+        for e in to_remove:
+            if e in self.edges:
+                self.edges.remove(e)
+            if e.target in self.nodes[e.source].neighbors:
+                self.nodes[e.source].neighbors.remove(e.target)
+            if e.source in self.nodes[e.target].neighbors:
+                self.nodes[e.target].neighbors.remove(e.source)
+                
+        for e in to_add:
+            self.edges.append(e)
+            if e.target not in self.nodes[e.source].neighbors:
+                self.nodes[e.source].neighbors.append(e.target)
+            if e.source not in self.nodes[e.target].neighbors:
+                self.nodes[e.target].neighbors.append(e.source)

@@ -86,6 +86,14 @@ observation_space:
       Keys are node_ids, values contain 'recent_post',
       'user_persona', and 'skepticism_score'.
 
+  financial_budget:
+    type: float
+    description: Remaining financial budget for operations. Episode ends when it drops below 0.
+
+  public_outrage_index:
+    type: float
+    description: Tracks Streisand effect. High outrage triggers adverserial evasion.
+
 # ─────────────────────────────────────────
 # ACTION SPACE
 # ─────────────────────────────────────────
@@ -98,12 +106,16 @@ action_space:
       - trace
       - quarantine
       - remove
+      - shadowban
+      - deploy_counter_narrative
       - submit_causal_chain
     descriptions:
       inspect: Read the semantic text post and demographic metadata of a node.
       trace: Request graph topology data (betweenness centrality, bridges).
       quarantine: Isolate node. Costly action.
       remove: Permanently sever node from graph. Very costly.
+      shadowban: Reduces influence by 80% without deleting the node. Low risk.
+      deploy_counter_narrative: Expensive global action to lower skepticism of an entire community.
       submit_causal_chain: >
         Submit a directed edge list showing exactly how the
         infection propagated from origin to the current state.
@@ -134,7 +146,7 @@ action_space:
     task2_tracing:
       allowed: [inspect, trace, quarantine, submit_causal_chain]
     task3_containment:
-      allowed: [inspect, trace, quarantine, remove, submit_causal_chain]
+      allowed: [inspect, trace, quarantine, remove, shadowban, deploy_counter_narrative, submit_causal_chain]
       budget: 5 actions per spread step
 
 # ─────────────────────────────────────────

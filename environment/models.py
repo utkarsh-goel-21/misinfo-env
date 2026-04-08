@@ -19,6 +19,8 @@ class ActionType(str, Enum):
     remove = "remove"
     trace = "trace"
     inspect = "inspect"
+    shadowban = "shadowban"
+    deploy_counter_narrative = "deploy_counter_narrative"
     submit_causal_chain = "submit_causal_chain"
 
 
@@ -108,6 +110,10 @@ class Observation(BaseModel):
         description="Results from 'inspect' or 'trace' actions."
     )
     agent_message: str = Field(description="System summary")
+    
+    # ── Macro Dynamics ──
+    financial_budget: float = Field(default=10000.0)
+    public_outrage_index: float = Field(default=0.0)
 
 
 # ─────────────────────────────────────────
@@ -165,4 +171,6 @@ class EnvironmentState(BaseModel):
     removed_nodes: List[str]
     actions_taken: List[Action]
     cumulative_score: float = 0.0
+    financial_budget: float = 10000.0
+    public_outrage_index: float = 0.0
     done: bool = False

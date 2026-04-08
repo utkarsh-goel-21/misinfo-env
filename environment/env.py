@@ -32,6 +32,8 @@ class MisinfoEnv:
         self.current_observation = None
         self.cumulative_penalty = 0.0
         self.cumulative_score = 0.0
+        self.financial_budget = 10000.0
+        self.public_outrage_index = 0.0
         self.step_rewards: list[float] = []
         self.done = False
         self._setup_task()
@@ -56,6 +58,8 @@ class MisinfoEnv:
     def reset(self) -> Observation:
         self.cumulative_penalty = 0.0
         self.cumulative_score = 0.0
+        self.financial_budget = 10000.0
+        self.public_outrage_index = 0.0
         self.step_rewards = []
         self.done = False
 
@@ -82,9 +86,45 @@ class MisinfoEnv:
                 {"error": validation_error}
             )
 
-        result = self.task.apply_action(action)
-        self.cumulative_penalty += result.get("penalty", 0.0)
-        self.done = self.task.done
+        # ACTION COSTS
+        costs = {
+            "inspect": 50.0,
+            "trace": 200.0,
+            "shadowban": 500.0,
+            "quarantine": 1500.0,
+            "remove": 3000.0,
+            "deploy_counter_narrative": 4000.0,
+            "submit_causal_chain": 0.0
+        }
+        cost = costs.get(action.action_type.value, 100.0)
+        self.financial_budget -= cost
+        
+        if self.financial_budget < 0:
+            self.done = True
+            result = {"valid": False, "penalty": 1.0, "info": "Budget depleted."}
+        else:
+            # Custom Action execution logic mapped over Task engine
+            result = self.task.apply_action(action)
+            self.cumulative_penalty += result.get("penalty", 0.0)
+            
+            # Adv. Streisand Mechanics
+            if action.action_type == ActionType.quarantine and not result.get("was_infected", True):
+                self.public_outrage_index = min(1.0, self.public_outrage_index + 0.15)
+            elif action.action_type == ActionType.remove and not result.get("was_infected", True):
+                self.public_outrage_index = min(1.0, self.public_outrage_index + 0.3)
+                
+            # If outrage high, mutate bots (Adversarial Reaction)
+            if self.public_outrage_index > 0.6:
+                for n in self.task.graph.nodes.values():
+                    if n.is_bot:
+                        n.community_id = "hidden_" + str(self.task.graph.step)
+                        n.user_persona = "Evading detection. Persona shifted."
+
+            # Every 3 steps, dynamic topology shifts (Users migrate)
+            if self.task.step_count > 0 and self.task.step_count % 3 == 0:
+                self.task.graph.remap_edges(migration_rate=0.1)
+                
+            self.done = self.task.done
 
         # If they inspected or traced, pass that to next obs
         inspection_results = None
@@ -125,6 +165,8 @@ class MisinfoEnv:
             removed_nodes=[],  # Could implement if needed
             actions_taken=[],
             cumulative_score=self.cumulative_score,
+            financial_budget=self.financial_budget,
+            public_outrage_index=self.public_outrage_index,
             done=self.done
         )
 
@@ -153,7 +195,9 @@ class MisinfoEnv:
             actions_remaining=actions_remaining,
             stream_reports=stream_reports,
             inspection_results=inspection_results,
-            agent_message=message
+            agent_message=message,
+            financial_budget=self.financial_budget,
+            public_outrage_index=self.public_outrage_index
         )
 
     # ─────────────────────────────────────────
@@ -167,6 +211,9 @@ class MisinfoEnv:
         if action.action_type == ActionType.submit_causal_chain:
             if not action.causal_chain:
                 return "submit_causal_chain requires 'causal_chain' parameter."
+        elif action.action_type == ActionType.deploy_counter_narrative:
+            if not action.target_node_id:
+                return "deploy_counter_narrative requires 'target_node_id' specifying community_id."
         else:
             if not action.target_node_id or action.target_node_id not in self.task.graph.nodes:
                 return f"Node {action.target_node_id} does not exist."
@@ -179,7 +226,7 @@ class MisinfoEnv:
         if self.task_id == TaskID.task2:
             if action.action_type.value not in ["inspect", "trace", "quarantine", "submit_causal_chain"]:
                 return "Task 2 allows inspect, trace, quarantine, submit."
-        # Task 3: inspect, trace, quarantine, remove, submit_causal_chain
+        # Task 3: inspect, trace, quarantine, remove, shadowban, deploy_counter_narrative, submit_causal_chain
         if self.task_id == TaskID.task3:
             pass # All permitted
 

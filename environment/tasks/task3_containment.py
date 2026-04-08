@@ -77,6 +77,26 @@ class Task3Containment:
                 result.update({"valid": False, "info": f"cannot remove {target}"})
             self.actions_this_step += 1
             
+        elif action.action_type.value == "shadowban":
+            if target in self.graph.nodes:
+                self.graph.nodes[target].influence_score *= 0.2
+                result.update({"valid": True, "info": f"shadowbanned {target}, influence reduced by 80%"})
+            else:
+                result.update({"valid": False, "info": f"node {target} not found"})
+            self.actions_this_step += 1
+            
+        elif action.action_type.value == "deploy_counter_narrative":
+            # Target is interpreted as community_id here.
+            # We lower skepticism score globally for that community
+            community_targets = [n for n in self.graph.nodes.values() if n.community_id == target]
+            if community_targets:
+                for n in community_targets:
+                    n.skepticism_score = min(1.0, n.skepticism_score + 0.3)
+                result.update({"valid": True, "info": f"boosted resilience for {len(community_targets)} nodes in {target}"})
+            else:
+                result.update({"valid": False, "info": f"community {target} not found"})
+            self.actions_this_step += 1
+            
         elif action.action_type.value == "submit_causal_chain":
             self.submitted_chain = action.causal_chain
             result.update({"valid": True, "info": "causal chain submitted successfully."})

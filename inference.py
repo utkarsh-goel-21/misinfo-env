@@ -97,7 +97,7 @@ SYSTEM_PROMPTS = {
 TASK_ALLOWED = {
     "task1_detection":   ["inspect", "quarantine"],
     "task2_tracing":     ["inspect", "trace", "quarantine", "submit_causal_chain"],
-    "task3_containment": ["inspect", "trace", "quarantine", "remove", "submit_causal_chain"],
+    "task3_containment": ["inspect", "trace", "quarantine", "remove", "shadowban", "deploy_counter_narrative", "submit_causal_chain"],
 }
 
 # ─────────────────────────────────────────

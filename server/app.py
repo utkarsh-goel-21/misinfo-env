@@ -301,8 +301,7 @@ async def health():
 
 @app.get("/tasks", tags=["environment"])
 async def list_tasks():
-    dummy = MisinfoEnv(task_id="task1_detection", seed=42)
-    return {"tasks": dummy.list_tasks()}
+    return {"tasks": ["task1_detection", "task2_tracing", "task3_containment"]}
 
 
 @app.post("/reset", response_model=ResetResponse, tags=["environment"])
@@ -396,141 +395,305 @@ async def visualizer():
     <html lang="en">
     <head>
         <meta charset="UTF-8">
-        <title>Sentinel-9 | Live Visualizer</title>
+        <title>S-9 Ops Center | War Room</title>
         <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
-        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+        <script src="https://unpkg.com/lucide@latest"></script>
         <style>
+            :root {
+                --bg-deep: #020617;
+                --glass-bg: rgba(15, 23, 42, 0.75);
+                --glass-border: rgba(255, 255, 255, 0.08);
+                --accent-blue: #3b82f6;
+                --accent-blue-glow: rgba(59, 130, 246, 0.5);
+                --accent-red: #ef4444;
+                --accent-red-glow: rgba(239, 68, 68, 0.6);
+                --accent-green: #10b981;
+                --accent-warn: #eab308;
+                --text-main: #f8fafc;
+                --text-muted: #94a3b8;
+            }
             body { 
-                margin: 0; padding: 0; background: #0f172a; color: #f8fafc; 
+                margin: 0; padding: 0; background: var(--bg-deep); color: var(--text-main); 
                 font-family: 'Outfit', sans-serif; overflow: hidden;
             }
-            #mynetwork { width: 100vw; height: 100vh; }
+            
+            /* Background Grid Effect */
+            body::before {
+                content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+                background-image: 
+                    linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                    linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+                background-size: 50px 50px; z-index: 0; pointer-events: none;
+            }
+
+            #mynetwork { width: 100vw; height: 100vh; position: absolute; top:0; left:0; z-index: 1; }
+            
+            .panel {
+                background: var(--glass-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+                border: 1px solid var(--glass-border); border-radius: 16px;
+                box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); z-index: 10;
+            }
+
+            /* LEFT SIDEBAR */
             .sidebar {
-                position: absolute; top: 20px; left: 20px; width: 300px;
-                background: rgba(30, 41, 59, 0.8); backdrop-filter: blur(8px);
-                border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 12px;
-                padding: 20px; z-index: 10;
+                position: absolute; top: 24px; left: 24px; width: 340px;
+                padding: 24px; display: flex; flex-direction: column; gap: 20px;
             }
-            .stat-card { background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px; margin-bottom: 10px; }
-            .stat-label { font-size: 0.8rem; color: #94a3b8; }
-            .stat-value { font-size: 1.2rem; font-weight: 700; color: #3b82f6; }
-            .legend { margin-top: 20px; font-size: 0.8rem; }
-            .legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
-            .color-box { width: 12px; height: 12px; border-radius: 3px; }
-            #status-bar {
-                position: absolute; bottom: 20px; left: 20px; right: 20px;
-                height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; border: 1px solid rgba(255,255,255,0.05);
+            .header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+            .header h1 { margin: 0; font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; text-transform: uppercase; background: linear-gradient(to right, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
+            
+            .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+            .metric-card { background: rgba(0,0,0,0.3); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.03); }
+            .metric-card.full { grid-column: 1 / -1; }
+            .metric-card h3 { margin: 0 0 8px 0; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 6px;}
+            .metric-val { font-size: 1.5rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+            
+            .budget-val { color: var(--accent-green); }
+            .outrage-val { color: var(--accent-warn); }
+            
+            .btn {
+                background: linear-gradient(135deg, var(--accent-blue), #2563eb);
+                color: white; border: none; padding: 14px; border-radius: 8px;
+                font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 1rem;
+                cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+                box-shadow: 0 0 15px var(--accent-blue-glow);
             }
-            #status-fill {
-                height: 100%; width: 0%; background: #3b82f6; border-radius: 4px; transition: width 0.5s ease;
+            .btn:hover { transform: translateY(-2px); box-shadow: 0 0 25px var(--accent-blue-glow); }
+            .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+            /* RIGHT SIDEBAR (TERMINAL) */
+            .terminal {
+                position: absolute; top: 24px; right: 24px; bottom: 80px; width: 380px;
+                display: flex; flex-direction: column; overflow: hidden; padding: 0;
             }
+            .terminal-header { padding: 16px 20px; border-bottom: 1px solid var(--glass-border); font-size: 0.8rem; font-weight: 600; color: var(--text-muted); display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.2) }
+            .terminal-body { 
+                padding: 20px; overflow-y: auto; flex: 1; 
+                font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; line-height: 1.5;
+            }
+            .log-entry { margin-bottom: 12px; opacity: 0; animation: slideIn 0.3s forwards; }
+            .log-time { color: #64748b; margin-right: 8px; }
+            .log-type { color: var(--accent-blue); font-weight: 700; }
+            .log-warn { color: var(--accent-warn); font-weight: 700; }
+            .log-crit { color: var(--accent-red); font-weight: 700; }
+
+            @keyframes slideIn { from { opacity: 0; transform: translateX(10px); } to { opacity: 1; transform: translateX(0); } }
+
+            /* BOTTOM BAR */
+            .bottom-bar {
+                position: absolute; bottom: 24px; left: 24px; right: 24px; height: 12px;
+                background: rgba(0,0,0,0.5); border-radius: 6px; border: 1px solid var(--glass-border);
+                overflow: hidden; z-index: 10;
+            }
+            #infection-fill {
+                height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-red));
+                transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); position: relative;
+            }
+            #infection-fill::after {
+                content: ''; position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+                background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+                animation: shimmer 2s infinite;
+            }
+            @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+
+            ::-webkit-scrollbar { width: 6px; }
+            ::-webkit-scrollbar-track { background: transparent; }
+            ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+            /* PULSE EFFECTS */
+            @keyframes pulse-red { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
         </style>
     </head>
     <body>
-        <div class="sidebar">
-            <h2 style="margin-top: 0;">Sentinel-9</h2>
-            <div class="stat-card">
-                <div class="stat-label">Task</div>
-                <div id="stat-task" class="stat-value">---</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Infection Rate</div>
-                <div id="stat-rate" class="stat-value">0.0%</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">Step / Max</div>
-                <div id="stat-steps" class="stat-value">0 / 0</div>
-            </div>
-            
-            <div class="legend">
-                <div class="legend-item"><div class="color-box" style="background:#f87171"></div> Infected</div>
-                <div class="legend-item"><div class="color-box" style="background:#3b82f6"></div> Quarantined</div>
-                <div class="legend-item"><div class="color-box" style="background:#10b981"></div> Clean</div>
-                <div class="legend-item"><div class="color-box" style="background:#94a3b8"></div> Removed</div>
-            </div>
-        </div>
-        
-        <div id="status-bar"><div id="status-fill"></div></div>
         <div id="mynetwork"></div>
 
+        <div class="sidebar panel">
+            <div class="header">
+                <i data-lucide="shield-alert" color="#3b82f6" size="28"></i>
+                <h1>S-9 Ops Center</h1>
+            </div>
+            
+            <div class="metric-card full">
+                <h3><i data-lucide="activity" size="14"></i> Active Operation</h3>
+                <div id="stat-task" class="metric-val" style="font-size: 1.1rem; color: #fff;">Awaiting Telemetry...</div>
+            </div>
+
+            <div class="metric-grid">
+                <div class="metric-card">
+                    <h3><i data-lucide="dollar-sign" size="14"></i> Budget</h3>
+                    <div id="stat-budget" class="metric-val budget-val">$10,000</div>
+                </div>
+                <div class="metric-card">
+                    <h3><i data-lucide="flame" size="14"></i> Outrage</h3>
+                    <div id="stat-outrage" class="metric-val outrage-val">0.0</div>
+                </div>
+                <div class="metric-card">
+                    <h3><i data-lucide="radio" size="14"></i> Infection</h3>
+                    <div id="stat-rate" class="metric-val" style="color: #ef4444">0.0%</div>
+                </div>
+                <div class="metric-card">
+                    <h3><i data-lucide="clock" size="14"></i> Step Cycle</h3>
+                    <div id="stat-steps" class="metric-val">0</div>
+                </div>
+            </div>
+
+            <button class="btn" id="btn-benchmark" onclick="runBenchmark()">
+                <i data-lucide="play-circle"></i> Run Deterministic Sim
+            </button>
+            <div style="font-size: 0.7rem; color: var(--text-muted); text-align: center;">Triggers task1_detection verification sequence.</div>
+        </div>
+
+        <div class="terminal panel">
+            <div class="terminal-header">
+                <i data-lucide="terminal" size="16"></i> EVENT TELEMETRY
+            </div>
+            <div class="terminal-body" id="t-body">
+                <div class="log-entry"><span class="log-time">[00:00:00]</span> <span class="log-type">SYS:</span> Connecting to OpenEnv backbone...</div>
+            </div>
+        </div>
+
+        <div class="bottom-bar">
+            <div id="infection-fill"></div>
+        </div>
+
         <script>
+            lucide.createIcons();
             let network = null;
             let nodes = new vis.DataSet();
             let edges = new vis.DataSet();
+            let lastActionCount = 0;
+
+            function formatTime() {
+                const now = new Date();
+                return `[${now.toTimeString().split(' ')[0]}]`;
+            }
+
+            function addLog(msg, type='type') {
+                const term = document.getElementById('t-body');
+                const div = document.createElement('div');
+                div.className = 'log-entry';
+                div.innerHTML = `<span class="log-time">${formatTime()}</span> <span class="log-${type}">${type.toUpperCase()}:</span> ${msg}`;
+                term.appendChild(div);
+                term.scrollTop = term.scrollHeight;
+            }
+
+            async function runBenchmark() {
+                const btn = document.getElementById('btn-benchmark');
+                btn.disabled = true;
+                btn.innerHTML = '<i data-lucide="loader-2" class="lucide-spin"></i> Executing...';
+                lucide.createIcons();
+                addLog("Initiating deterministic benchmark sequence...", "warn");
+                
+                try {
+                    await fetch('/benchmark', {method: 'POST'});
+                    addLog("Benchmark sequence complete. Evaluating...", "crit");
+                } catch (e) {
+                    addLog("Benchmark execution failed", "crit");
+                }
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i data-lucide="play-circle"></i> Run Deterministic Sim';
+                    lucide.createIcons();
+                }, 2000);
+            }
 
             async function fetchData() {
                 try {
                     const response = await fetch('/state');
-                    const state = await response.json();
-                    updateUI(state);
+                    if (response.ok) {
+                        const state = await response.json();
+                        updateUI(state);
+                    }
                 } catch (e) {
                     console.error("Fetch failed", e);
                 }
-                setTimeout(fetchData, 2000);
+                setTimeout(fetchData, 1000); // 1s refresh for real-time feel
             }
 
             function updateUI(state) {
-                document.getElementById('stat-task').innerText = state.task_id.replace('task', 'Task ');
+                document.getElementById('stat-task').innerText = state.task_id.toUpperCase().replace('_', ' | ');
+                
+                // Animate numbers smoothly (simplified for DOM updates)
+                document.getElementById('stat-budget').innerText = '$' + state.financial_budget.toLocaleString();
+                if(state.financial_budget < 2000) document.getElementById('stat-budget').style.color = '#ef4444';
+                else document.getElementById('stat-budget').style.color = '#10b981';
+
+                document.getElementById('stat-outrage').innerText = (state.public_outrage_index * 10).toFixed(1);
+                if(state.public_outrage_index > 0.6) document.getElementById('stat-outrage').style.color = '#ef4444';
+
                 const rate = (state.network.total_infected / Object.keys(state.network.nodes).length) * 100;
                 document.getElementById('stat-rate').innerText = rate.toFixed(1) + '%';
-                document.getElementById('stat-steps').innerText = state.step_number + ' / ' + state.network.nodes[Object.keys(state.network.nodes)[0]].infected_at_step; // wait, max steps?
-                // actually better to just use state.step_number
                 document.getElementById('stat-steps').innerText = state.step_number;
                 
-                const threshold = state.network.infection_threshold * 100;
                 const fill = document.getElementById('status-fill');
-                fill.style.width = Math.min(100, (rate / (state.network.infection_threshold || 1)) * 100) + '%';
-                if (rate >= threshold) fill.style.background = '#ef4444';
-                else fill.style.background = '#3b82f6';
+                const threshold = state.network.infection_threshold * 100;
+                const barWidth = Math.min(100, (rate / (state.network.infection_threshold || 1)) * 100);
+                document.getElementById('infection-fill').style.width = barWidth + '%';
 
-                // Update Graph
-                const statusColors = {
-                    'clean': '#10b981',
-                    'infected': '#f87171',
-                    'quarantined': '#3b82f6',
-                    'removed': '#94a3b8'
-                };
+                // Log New Actions
+                // state doesn't track specific action history right now, but we can track steps
+                if (state.step_number > lastActionCount) {
+                    addLog(`Cycle advanced to STEP ${state.step_number}`, "warn");
+                    addLog(`Infection spread calculation complete. Rate: ${rate.toFixed(1)}%`, "type");
+                    lastActionCount = state.step_number;
+                }
 
+                // Update Graph with Premium Styling
                 const updatedNodes = [];
                 for (const node_id in state.network.nodes) {
                     const n = state.network.nodes[node_id];
+                    let bgColor, borderCol, shadow;
+                    if (n.status === 'clean') { bgColor = '#0f172a'; borderCol = '#334155'; }
+                    else if (n.status === 'infected') { bgColor = '#dc2626'; borderCol = '#f87171'; shadow = {color:'#ef4444', size:15, x:0, y:0}; }
+                    else if (n.status === 'quarantined') { bgColor = '#2563eb'; borderCol = '#60a5fa'; shadow = {color:'#3b82f6', size:15, x:0, y:0}; }
+                    else { bgColor = '#1e293b'; borderCol = '#0f172a'; }
+
                     updatedNodes.push({
-                        id: node_id,
-                        label: node_id,
-                        color: {
-                            background: statusColors[n.status] || '#10b981',
-                            border: '#1e293b'
-                        },
-                        font: { color: '#ffffff' },
-                        title: `Persona: ${n.user_persona}\\nPost: ${n.recent_post}\\nSkep: ${n.skepticism_score}`
+                        id: node_id, label: node_id.replace('node_',''),
+                        color: { background: bgColor, border: borderCol, highlight: { background: bgColor, border: '#fff' } },
+                        font: { color: '#ffffff', face: 'JetBrains Mono', size: 10 },
+                        shadow: shadow || false,
+                        title: `<div style="padding:8px; background:#0f172a; color:#fff; border-radius:4px; font-family:sans-serif;"><b>${n.user_persona}</b><br>Comm: ${n.community_id}<br>Bot: ${n.is_bot}<br>Skep: ${n.skepticism_score}</div>`
                     });
                 }
                 nodes.update(updatedNodes);
 
-                if (edges.length === 0) {
-                    const edgeList = state.network.edges.map((e, idx) => ({
-                        id: idx,
-                        from: e.source,
-                        to: e.target,
-                        color: { color: 'rgba(255,255,255,0.1)' }
-                    }));
-                    edges.add(edgeList);
-                }
+                // Update Edges (Handle Migration)
+                const currentEdges = edges.getIds();
+                const newEdgeMap = {};
+                const edgePayload = [];
+                state.network.edges.forEach((e, idx) => {
+                    const eId = `${e.source}-${e.target}`;
+                    newEdgeMap[eId] = true;
+                    if(!edges.get(eId)) {
+                        edgePayload.push({
+                            id: eId, from: e.source, to: e.target,
+                            color: { color: 'rgba(255,255,255,0.05)' }, width: e.weight * 2
+                        });
+                    }
+                });
+                if(edgePayload.length > 0) edges.add(edgePayload);
+                // Remove severed edges
+                currentEdges.forEach(id => {
+                    if(!newEdgeMap[id]) edges.remove(id);
+                });
             }
 
             const container = document.getElementById('mynetwork');
             const data = { nodes: nodes, edges: edges };
             const options = {
-                nodes: { shape: 'dot', size: 16, borderWith: 2 },
-                edges: { width: 1, smooth: false },
+                nodes: { shape: 'dot', size: 14, borderWidth: 2 },
+                edges: { smooth: { type: 'continuous' } },
                 physics: {
-                    stabilization: true,
-                    barnesHut: { gravitationalConstant: -2000, centralGravity: 0.3, springLength: 95 }
-                }
+                    solver: 'forceAtlas2Based',
+                    forceAtlas2Based: { gravitationalConstant: -50, centralGravity: 0.01, springLength: 100, springConstant: 0.08 }
+                },
+                interaction: { hover: true, tooltipDelay: 100 }
             };
             network = new vis.Network(container, data, options);
             
-            fetchData();
+            setTimeout(() => { addLog("Uplink established. Receiving stream...", "type"); fetchData(); }, 1500);
         </script>
     </body>
     </html>
