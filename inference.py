@@ -192,8 +192,11 @@ def call_llm(client: OpenAI, messages: list[dict]) -> dict:
     return {"action_type": "inspect", "target_node_id": "node_0", "confidence": 0.3, "reasoning": "LLM fallback"}
 
 
-def parse_action(parsed: dict, obs: Observation, task_id: str) -> Action:
+def parse_action(parsed: dict | list, obs: Observation, task_id: str) -> Action:
     """Parse LLM output into a valid Action, with fallback handling."""
+    if isinstance(parsed, list):
+        parsed = parsed[0] if len(parsed) > 0 else {}
+
     at = parsed.get("action_type", "inspect")
 
     # Validate action type
