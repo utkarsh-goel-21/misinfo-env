@@ -137,8 +137,10 @@ async def list_tasks():
 
 
 @app.post("/reset", response_model=ResetResponse, tags=["environment"])
-async def reset(body: ResetRequest):
+async def reset(body: Optional[ResetRequest] = None):
     global _env
+    if body is None:
+        body = ResetRequest()
     if body.task_id not in VALID_TASKS:
         raise HTTPException(status_code=422, detail=f"Invalid task_id. Must be one of: {VALID_TASKS}")
     _env = MisinfoEnv(task_id=body.task_id, seed=body.seed)
