@@ -1,484 +1,381 @@
 """
-Test suite for MisinfoEnv.
+SENTINEL-9 — Comprehensive Test Suite
 
-Tests that openenv validate runs. Verifies:
-  - reset() returns valid Observation
-  - step() returns valid (Observation, Reward, bool, dict)
-  - state() returns valid EnvironmentState
-  - All 3 tasks work end to end
-  - Graders return scores in [0.0, 1.0]
-  - Same seed produces same results (reproducibility)
-  - Action validation works correctly
-  - Invalid actions return safe responses
-
-Run with:
-    pytest tests/test_env.py -v
+Tests every component: reset, step, POMDP, Brier scoring, graders,
+reproducibility, budget, adversarial mechanics, edge cases.
 """
 
 import pytest
 from environment.env import MisinfoEnv
-from environment.models import (
-    Action,
-    ActionType,
-    Observation,
-    Reward,
-    EnvironmentState,
-    NodeStatus,
-    TaskID,
-)
-from environment.graders.grader1 import Grader1
-from environment.graders.grader2 import Grader2
-from environment.graders.grader3 import Grader3
-
-SEED = 42
-ALL_TASKS = [
-    "task1_detection",
-    "task2_tracing",
-    "task3_containment",
-]
+from environment.models import Action, ActionType, NodeStatus, TaskID
 
 
-# ─────────────────────────────────────────
-# FIXTURES
-# ─────────────────────────────────────────
-
-@pytest.fixture
-def env_task1():
-    env = MisinfoEnv(task_id="task1_detection", seed=SEED)
-    yield env
-    env.close()
-
-
-@pytest.fixture
-def env_task2():
-    env = MisinfoEnv(task_id="task2_tracing", seed=SEED)
-    yield env
-    env.close()
-
-
-@pytest.fixture
-def env_task3():
-    env = MisinfoEnv(task_id="task3_containment", seed=SEED)
-    yield env
-    env.close()
-
-
-# ─────────────────────────────────────────
-# TEST: reset() CONTRACT
-# ─────────────────────────────────────────
+# ═══════════════════════════════════════
+# RESET TESTS
+# ═══════════════════════════════════════
 
 class TestReset:
-    def test_reset_returns_observation(self, env_task1):
-        obs = env_task1.reset()
-        assert isinstance(obs, Observation)
-
-    def test_observation_has_required_fields(self, env_task1):
-        obs = env_task1.reset()
-        assert obs.task_id is not None
-        assert obs.step_number is not None
-        assert obs.max_steps is not None
-        assert obs.network is not None
-        assert isinstance(obs.recently_infected, list)
-        assert isinstance(obs.agent_message, str)
-        assert len(obs.agent_message) > 0
-
-    def test_observation_network_has_nodes(self, env_task1):
-        obs = env_task1.reset()
-        assert len(obs.network.nodes) > 0
-
-    def test_observation_network_has_edges(self, env_task1):
-        obs = env_task1.reset()
-        assert len(obs.network.edges) >= 0  # isolated graphs possible
-
-    def test_step_number_starts_at_zero(self, env_task1):
-        obs = env_task1.reset()
-        assert obs.step_number == 0
-
-    @pytest.mark.parametrize("task_id", ALL_TASKS)
-    def test_all_tasks_reset(self, task_id):
-        env = MisinfoEnv(task_id=task_id, seed=SEED)
+    def test_task1_reset(self):
+        env = MisinfoEnv(task_id="task1_detection", seed=42)
         obs = env.reset()
-        assert isinstance(obs, Observation)
-        assert obs.task_id.value == task_id
-        env.close()
+        assert obs.task_id == TaskID.task1
+        assert obs.network_size == 40
+        assert obs.step_number == 0
+        assert obs.max_steps == 10
+        assert obs.infection_rate > 0
+        assert len(obs.stream_reports) > 0
+        assert obs.financial_budget == 10000.0
+        assert obs.public_outrage_index == 0.0
+        assert obs.brier_score_running == 0.0
+        assert len(obs.revealed_nodes) == 0
 
-    def test_task3_has_actions_remaining(self, env_task3):
-        obs = env_task3.reset()
+    def test_task2_reset(self):
+        env = MisinfoEnv(task_id="task2_tracing", seed=42)
+        obs = env.reset()
+        assert obs.task_id == TaskID.task2
+        assert obs.network_size == 80
+        assert obs.infection_rate > 0
+
+    def test_task3_reset(self):
+        env = MisinfoEnv(task_id="task3_containment", seed=42)
+        obs = env.reset()
+        assert obs.task_id == TaskID.task3
+        assert obs.network_size == 150
         assert obs.actions_remaining is not None
-        assert obs.actions_remaining == 3
+        assert obs.actions_remaining == 5
 
-    def test_task1_actions_remaining_is_none(self, env_task1):
-        obs = env_task1.reset()
-        assert obs.actions_remaining is None
-
-    def test_infection_threshold_in_range(self, env_task1):
-        obs = env_task1.reset()
-        t = obs.network.infection_threshold
-        assert 0.0 < t <= 1.0
-
-    def test_origin_hidden_in_task2(self, env_task2):
-        obs = env_task2.reset()
-        assert obs.network.origin_node_id is None
-
-    def test_origin_hidden_in_task3(self, env_task3):
-        obs = env_task3.reset()
-        assert obs.network.origin_node_id is None
+    def test_invalid_task(self):
+        with pytest.raises(ValueError):
+            MisinfoEnv(task_id="task99_invalid", seed=42)
 
 
-# ─────────────────────────────────────────
-# TEST: step() CONTRACT
-# ─────────────────────────────────────────
+# ═══════════════════════════════════════
+# STEP TESTS
+# ═══════════════════════════════════════
 
 class TestStep:
-    def _first_node(self, obs: Observation) -> str:
-        return list(obs.network.nodes.keys())[0]
-
-    def test_step_returns_four_tuple(self, env_task1):
-        obs = env_task1.reset()
-        node = self._first_node(obs)
-        result = env_task1.step(
-            Action(action_type=ActionType.inspect, target_node_id=node)
-        )
-        assert len(result) == 4
-
-    def test_step_returns_correct_types(self, env_task1):
-        obs = env_task1.reset()
-        node = self._first_node(obs)
-        new_obs, reward, done, info = env_task1.step(
-            Action(action_type=ActionType.inspect, target_node_id=node)
-        )
-        assert isinstance(new_obs, Observation)
-        assert isinstance(reward, Reward)
-        assert isinstance(done, bool)
-        assert isinstance(info, dict)
-
-    def test_reward_score_in_range(self, env_task1):
-        obs = env_task1.reset()
-        node = self._first_node(obs)
-        _, reward, _, _ = env_task1.step(
-            Action(action_type=ActionType.inspect, target_node_id=node)
-        )
-        assert 0.0 <= reward.score <= 1.0
-
-    def test_reward_has_feedback(self, env_task1):
-        obs = env_task1.reset()
-        node = self._first_node(obs)
-        _, reward, _, _ = env_task1.step(
-            Action(action_type=ActionType.inspect, target_node_id=node)
-        )
-        assert isinstance(reward.feedback, str)
-        assert len(reward.feedback) > 0
-
-    def test_done_is_false_mid_episode(self, env_task1):
-        obs = env_task1.reset()
-        node = self._first_node(obs)
-        _, _, done, _ = env_task1.step(
-            Action(action_type=ActionType.inspect, target_node_id=node)
-        )
-        assert done is False  # first step should not be terminal
-
-    def test_invalid_node_returns_safely(self, env_task1):
-        env_task1.reset()
-        obs, reward, done, info = env_task1.step(
-            Action(
-                action_type=ActionType.inspect,
-                target_node_id="nonexistent_node_xyz",
-            )
-        )
-        assert isinstance(obs, Observation)
-        assert isinstance(reward, Reward)
-        assert "error" in info
-
-    def test_task1_disallows_quarantine(self, env_task1):
-        obs = env_task1.reset()
-        node = self._first_node(obs)
-        _, reward, _, info = env_task1.step(
-            Action(action_type=ActionType.quarantine, target_node_id=node)
-        )
-        assert "error" in info
-
-    def test_task2_disallows_quarantine(self, env_task2):
-        obs = env_task2.reset()
-        node = self._first_node(obs)
-        _, reward, _, info = env_task2.step(
-            Action(action_type=ActionType.quarantine, target_node_id=node)
-        )
-        assert "error" in info
-
-    def test_step_increments_step_count(self, env_task1):
-        obs = env_task1.reset()
-        assert obs.step_number == 0
-        node = self._first_node(obs)
-        new_obs, _, _, _ = env_task1.step(
-            Action(action_type=ActionType.inspect, target_node_id=node)
-        )
-        assert new_obs.step_number == 1
-
-    def test_step_after_done_raises(self, env_task1):
-        obs = env_task1.reset()
-        node = self._first_node(obs)
-        action = Action(action_type=ActionType.inspect, target_node_id=node)
-        # Exhaust all steps
-        for _ in range(obs.max_steps):
-            try:
-                env_task1.step(action)
-            except RuntimeError:
-                break
-        # Now it must raise
-        with pytest.raises(RuntimeError):
-            env_task1.step(action)
-
-
-# ─────────────────────────────────────────
-# TEST: state() CONTRACT
-# ─────────────────────────────────────────
-
-class TestState:
-    def test_state_returns_environment_state(self, env_task1):
-        env_task1.reset()
-        s = env_task1.state()
-        assert isinstance(s, EnvironmentState)
-
-    def test_state_has_origin(self, env_task1):
-        env_task1.reset()
-        s = env_task1.state()
-        assert s.origin_node_id is not None
-        assert isinstance(s.origin_node_id, str)
-
-    def test_state_origin_is_in_network(self, env_task1):
-        env_task1.reset()
-        s = env_task1.state()
-        assert s.origin_node_id in s.network.nodes
-
-    def test_state_infected_nodes_list(self, env_task1):
-        env_task1.reset()
-        s = env_task1.state()
-        assert isinstance(s.infected_nodes, list)
-        assert len(s.infected_nodes) > 0
-
-    def test_state_score_starts_zero(self, env_task1):
-        env_task1.reset()
-        s = env_task1.state()
-        assert s.cumulative_score == 0.0
-
-    def test_state_done_starts_false(self, env_task1):
-        env_task1.reset()
-        s = env_task1.state()
-        assert s.done is False
-
-    @pytest.mark.parametrize("task_id", ALL_TASKS)
-    def test_state_all_tasks(self, task_id):
-        env = MisinfoEnv(task_id=task_id, seed=SEED)
-        env.reset()
-        s = env.state()
-        assert isinstance(s, EnvironmentState)
-        assert s.origin_node_id is not None
-        env.close()
-
-
-# ─────────────────────────────────────────
-# TEST: END-TO-END (all tasks complete)
-# ─────────────────────────────────────────
-
-class TestEndToEnd:
-    def _run_full_episode(
-        self,
-        task_id: str,
-        seed: int = SEED,
-        action_type: str = "inspect"
-    ) -> Reward:
-        """Run an episode to completion with a fixed action."""
-        env = MisinfoEnv(task_id=task_id, seed=seed)
+    def test_inspect_returns_data(self):
+        env = MisinfoEnv(task_id="task1_detection", seed=42)
         obs = env.reset()
-        allowed_types = {
-            "task1_detection": ActionType.inspect,
-            "task2_tracing": ActionType.inspect,
-            "task3_containment": ActionType.inspect,
-        }
-        act_type = allowed_types[task_id]
+        target = obs.stream_reports[0]
+        action = Action(action_type=ActionType.inspect, target_node_id=target, confidence=0.5)
+        obs2, reward, done, info = env.step(action)
+        assert info["action_valid"] is True
+        assert obs2.inspection_results is not None
+        assert target in obs2.inspection_results
+        # Fog-of-war: target + neighbors should be revealed
+        assert target in obs2.revealed_nodes
+        assert len(obs2.revealed_nodes) > 1
 
-        done = False
-        final_reward = None
-        node = list(obs.network.nodes.keys())[0]
+    def test_quarantine_infected(self):
+        env = MisinfoEnv(task_id="task1_detection", seed=42)
+        obs = env.reset()
+        # Find an actually infected node
+        infected = env.task.graph.get_infected_nodes()
+        target = infected[0]
+        action = Action(action_type=ActionType.quarantine, target_node_id=target, confidence=0.9)
+        obs2, reward, done, info = env.step(action)
+        assert info["action_valid"] is True
+        assert env.task.graph.nodes[target].status == NodeStatus.quarantined
 
-        while not done:
-            obs, reward, done, info = env.step(
-                Action(action_type=act_type, target_node_id=node)
-            )
-            if done:
-                final_reward = reward
+    def test_quarantine_clean_node_penalty(self):
+        env = MisinfoEnv(task_id="task1_detection", seed=42)
+        obs = env.reset()
+        # Find a clean node
+        clean = [nid for nid, n in env.task.graph.nodes.items() if n.status == NodeStatus.clean]
+        target = clean[0]
+        action = Action(action_type=ActionType.quarantine, target_node_id=target, confidence=0.9)
+        _, reward, _, info = env.step(action)
+        # High confidence + wrong = high Brier
+        assert info["brier_this_step"] > 0.5
+
+    def test_invalid_action_type_for_task(self):
+        env = MisinfoEnv(task_id="task1_detection", seed=42)
+        env.reset()
+        # trace not allowed in task1
+        action = Action(action_type=ActionType.trace, target_node_id="node_0", confidence=0.5)
+        _, reward, _, info = env.step(action)
+        assert "error" in info or reward.score < 0
+
+    def test_invalid_node_id(self):
+        env = MisinfoEnv(task_id="task1_detection", seed=42)
+        env.reset()
+        action = Action(action_type=ActionType.inspect, target_node_id="node_9999", confidence=0.5)
+        _, reward, _, info = env.step(action)
+        assert reward.score < 0
+
+    def test_step_after_done_raises(self):
+        env = MisinfoEnv(task_id="task1_detection", seed=42)
+        env.reset()
+        env.done = True
+        action = Action(action_type=ActionType.inspect, target_node_id="node_0", confidence=0.5)
+        with pytest.raises(RuntimeError):
+            env.step(action)
+
+    def test_trace_returns_timeline(self):
+        env = MisinfoEnv(task_id="task2_tracing", seed=42)
+        obs = env.reset()
+        target = obs.stream_reports[0]
+        action = Action(action_type=ActionType.trace, target_node_id=target, confidence=0.5)
+        obs2, _, _, info = env.step(action)
+        assert info["action_valid"] is True
+        data = obs2.inspection_results[target]
+        assert "betweenness_centrality" in data
+        assert "neighbor_infection_timeline" in data
+        assert "is_bridge" in data
+
+
+# ═══════════════════════════════════════
+# POMDP TESTS
+# ═══════════════════════════════════════
+
+class TestPOMDP:
+    def test_fog_of_war_initially_empty(self):
+        env = MisinfoEnv(task_id="task1_detection", seed=42)
+        obs = env.reset()
+        assert len(obs.revealed_nodes) == 0
+
+    def test_inspect_reveals_neighbors(self):
+        env = MisinfoEnv(task_id="task1_detection", seed=42)
+        obs = env.reset()
+        target = obs.stream_reports[0]
+        action = Action(action_type=ActionType.inspect, target_node_id=target, confidence=0.5)
+        obs2, _, _, _ = env.step(action)
+        # Should reveal target + all its neighbors
+        node = env.task.graph.nodes[target]
+        expected = {target} | set(node.neighbors)
+        assert set(obs2.revealed_nodes) == expected
+
+    def test_stream_reports_contain_false_positives(self):
+        """Over many resets, some stream report nodes should be clean."""
+        false_positive_found = False
+        for seed in range(10):
+            env = MisinfoEnv(task_id="task1_detection", seed=seed)
+            obs = env.reset()
+            for node_id in obs.stream_reports:
+                node = env.task.graph.nodes.get(node_id)
+                if node and node.status == NodeStatus.clean:
+                    false_positive_found = True
+                    break
+            if false_positive_found:
                 break
-
-        env.close()
-        return final_reward
-
-    def test_task1_completes(self):
-        reward = self._run_full_episode("task1_detection")
-        assert reward is not None
-        assert isinstance(reward, Reward)
-        assert reward.done is True
-
-    def test_task2_completes(self):
-        reward = self._run_full_episode("task2_tracing")
-        assert reward is not None
-        assert isinstance(reward, Reward)
-        assert reward.done is True
-
-    def test_task3_completes(self):
-        reward = self._run_full_episode("task3_containment")
-        assert reward is not None
-        assert isinstance(reward, Reward)
-        assert reward.done is True
-
-    def test_final_score_in_range_task1(self):
-        reward = self._run_full_episode("task1_detection")
-        assert 0.0 <= reward.score <= 1.0
-
-    def test_final_score_in_range_task2(self):
-        reward = self._run_full_episode("task2_tracing")
-        assert 0.0 <= reward.score <= 1.0
-
-    def test_final_score_in_range_task3(self):
-        reward = self._run_full_episode("task3_containment")
-        assert 0.0 <= reward.score <= 1.0
+        assert false_positive_found, "No false positives found across 10 seeds"
 
 
-# ─────────────────────────────────────────
-# TEST: REPRODUCIBILITY
-# ─────────────────────────────────────────
+# ═══════════════════════════════════════
+# BRIER SCORING TESTS
+# ═══════════════════════════════════════
 
-class TestReproducibility:
-    def _get_initial_infected(self, task_id: str, seed: int) -> list:
-        env = MisinfoEnv(task_id=task_id, seed=seed)
+class TestBrier:
+    def test_high_confidence_correct_low_brier(self):
+        env = MisinfoEnv(task_id="task1_detection", seed=42)
         env.reset()
-        s = env.state()
-        env.close()
-        return sorted(s.infected_nodes)
+        infected = env.task.graph.get_infected_nodes()
+        # Quarantine infected node with high confidence
+        action = Action(action_type=ActionType.quarantine, target_node_id=infected[0], confidence=0.95)
+        _, _, _, info = env.step(action)
+        # Brier = (0.95 - 1.0)² = 0.0025
+        assert info["brier_this_step"] < 0.01
 
-    def _get_origin(self, task_id: str, seed: int) -> str:
-        env = MisinfoEnv(task_id=task_id, seed=seed)
+    def test_high_confidence_wrong_high_brier(self):
+        env = MisinfoEnv(task_id="task1_detection", seed=42)
         env.reset()
-        s = env.state()
-        env.close()
-        return s.origin_node_id
+        clean = [nid for nid, n in env.task.graph.nodes.items() if n.status == NodeStatus.clean]
+        # Quarantine clean node with high confidence
+        action = Action(action_type=ActionType.quarantine, target_node_id=clean[0], confidence=0.95)
+        _, _, _, info = env.step(action)
+        # Brier = (0.95 - 0.0)² = 0.9025
+        assert info["brier_this_step"] > 0.8
 
-    @pytest.mark.parametrize("task_id", ALL_TASKS)
-    def test_same_seed_same_infected(self, task_id):
-        run1 = self._get_initial_infected(task_id, SEED)
-        run2 = self._get_initial_infected(task_id, SEED)
-        assert run1 == run2, (
-            f"Same seed produced different infected nodes for {task_id}"
-        )
-
-    @pytest.mark.parametrize("task_id", ALL_TASKS)
-    def test_same_seed_same_origin(self, task_id):
-        origin1 = self._get_origin(task_id, SEED)
-        origin2 = self._get_origin(task_id, SEED)
-        assert origin1 == origin2, (
-            f"Same seed produced different origin for {task_id}"
-        )
-
-    @pytest.mark.parametrize("task_id", ALL_TASKS)
-    def test_different_seed_different_results(self, task_id):
-        origin_42 = self._get_origin(task_id, 42)
-        origin_99 = self._get_origin(task_id, 99)
-        # Note: different seeds COULD produce same origin by chance,
-        # but infected sets should differ
-        infected_42 = self._get_initial_infected(task_id, 42)
-        infected_99 = self._get_initial_infected(task_id, 99)
-        # At least one should be different
-        # (soft check — identical by chance is unlikely but possible)
-        assert (
-            origin_42 != origin_99
-            or infected_42 != infected_99
-            or True  # pass even if coincidentally same
-        )
+    def test_low_confidence_wrong_moderate_brier(self):
+        env = MisinfoEnv(task_id="task1_detection", seed=42)
+        env.reset()
+        clean = [nid for nid, n in env.task.graph.nodes.items() if n.status == NodeStatus.clean]
+        action = Action(action_type=ActionType.quarantine, target_node_id=clean[0], confidence=0.3)
+        _, _, _, info = env.step(action)
+        # Brier = (0.3 - 0.0)² = 0.09
+        assert info["brier_this_step"] < 0.15
 
 
-# ─────────────────────────────────────────
-# TEST: GRADER SCORES IN RANGE
-# ─────────────────────────────────────────
+# ═══════════════════════════════════════
+# GRADER TESTS
+# ═══════════════════════════════════════
 
 class TestGraders:
-    def _run_and_grade(self, task_id: str) -> float:
-        """Run full episode and return final grader score."""
-        env = MisinfoEnv(task_id=task_id, seed=SEED)
+    def test_grader1_perfect_score(self):
+        env = MisinfoEnv(task_id="task1_detection", seed=42)
+        env.reset()
+        # Quarantine ALL infected nodes with high confidence
+        infected = env.task.graph.get_infected_nodes()
+        for nid in infected:
+            action = Action(action_type=ActionType.quarantine, target_node_id=nid, confidence=0.95)
+            env.step(action)
+        # Finish remaining steps
+        while not env.done:
+            action = Action(action_type=ActionType.inspect, target_node_id="node_0", confidence=0.5)
+            env.step(action)
+        # Should have high TPR
+        state = env.state()
+        assert state.cumulative_score > 0.2
+
+    def test_grader2_correct_origin(self):
+        env = MisinfoEnv(task_id="task2_tracing", seed=42)
+        env.reset()
+        origin = env.task.graph.origin_node_id
+        tree = env.task.graph.get_causal_tree_as_dicts()
+        chain = [{"from": origin, "to": tree[0]["to"]}] if tree else [{"from": origin, "to": "node_0"}]
+        action = Action(action_type=ActionType.submit_causal_chain, confidence=0.8, causal_chain=chain)
+        _, reward, done, _ = env.step(action)
+        assert done is True
+        assert reward.partial_credits["origin_correct"] is True
+        assert reward.score > 0
+
+    def test_grader3_scores_bounded(self):
+        env = MisinfoEnv(task_id="task3_containment", seed=42)
+        env.reset()
+        # Take a few actions then submit
+        for _ in range(3):
+            action = Action(action_type=ActionType.inspect, target_node_id="node_0", confidence=0.5)
+            env.step(action)
+        chain = [{"from": env.task.graph.origin_node_id, "to": "node_1"}]
+        action = Action(action_type=ActionType.submit_causal_chain, confidence=0.5, causal_chain=chain)
+        _, reward, done, _ = env.step(action)
+        assert -1.0 <= reward.score <= 1.0
+
+
+# ═══════════════════════════════════════
+# REPRODUCIBILITY TESTS
+# ═══════════════════════════════════════
+
+class TestReproducibility:
+    def test_same_seed_same_episode(self):
+        for task_id in ["task1_detection", "task2_tracing", "task3_containment"]:
+            e1 = MisinfoEnv(task_id=task_id, seed=42)
+            e2 = MisinfoEnv(task_id=task_id, seed=42)
+            o1 = e1.reset()
+            o2 = e2.reset()
+            assert o1.infection_rate == o2.infection_rate
+            assert o1.network_size == o2.network_size
+
+    def test_different_seed_different_episode(self):
+        e1 = MisinfoEnv(task_id="task1_detection", seed=42)
+        e2 = MisinfoEnv(task_id="task1_detection", seed=99)
+        o1 = e1.reset()
+        o2 = e2.reset()
+        # Highly unlikely to be identical
+        assert o1.infection_rate != o2.infection_rate or o1.stream_reports != o2.stream_reports
+
+
+# ═══════════════════════════════════════
+# BUDGET TESTS
+# ═══════════════════════════════════════
+
+class TestBudget:
+    def test_budget_depletes(self):
+        env = MisinfoEnv(task_id="task3_containment", seed=42)
         obs = env.reset()
-        node = list(obs.network.nodes.keys())[0]
+        initial = obs.financial_budget
+        action = Action(action_type=ActionType.inspect, target_node_id="node_0", confidence=0.5)
+        obs2, _, _, info = env.step(action)
+        assert info["budget"] < initial
+        assert info["budget"] == initial - 50.0  # inspect costs $50
 
-        allowed = {
-            "task1_detection": ActionType.inspect,
-            "task2_tracing": ActionType.inspect,
-            "task3_containment": ActionType.inspect,
-        }
-        act_type = allowed[task_id]
-        done = False
-        final_score = 0.0
+    def test_expensive_action_costs(self):
+        env = MisinfoEnv(task_id="task3_containment", seed=42)
+        env.reset()
+        # Remove costs $3000
+        infected = env.task.graph.get_infected_nodes()
+        action = Action(action_type=ActionType.remove, target_node_id=infected[0], confidence=0.8)
+        _, _, _, info = env.step(action)
+        assert info["budget"] == 10000.0 - 3000.0
 
-        while not done:
-            obs, reward, done, _ = env.step(
-                Action(action_type=act_type, target_node_id=node)
-            )
-            if done:
-                final_score = reward.score
+
+# ═══════════════════════════════════════
+# ADVERSARIAL TESTS
+# ═══════════════════════════════════════
+
+class TestAdversarial:
+    def test_bots_exist_in_graph(self):
+        env = MisinfoEnv(task_id="task3_containment", seed=42)
+        env.reset()
+        bots = env.task.graph.get_bot_nodes()
+        assert len(bots) > 0
+
+    def test_wrong_quarantine_increases_outrage(self):
+        env = MisinfoEnv(task_id="task3_containment", seed=42)
+        env.reset()
+        assert env.public_outrage_index == 0.0
+        clean = [nid for nid, n in env.task.graph.nodes.items() if n.status == NodeStatus.clean]
+        action = Action(action_type=ActionType.quarantine, target_node_id=clean[0], confidence=0.8)
+        env.step(action)
+        assert env.public_outrage_index > 0
+
+    def test_causal_tree_tracked(self):
+        env = MisinfoEnv(task_id="task1_detection", seed=42)
+        env.reset()
+        tree = env.task.graph.get_causal_tree_as_dicts()
+        assert len(tree) > 0
+        # Each edge should have 'from' and 'to' keys
+        for edge in tree:
+            assert "from" in edge
+            assert "to" in edge
+
+
+# ═══════════════════════════════════════
+# STATE TESTS
+# ═══════════════════════════════════════
+
+class TestState:
+    def test_state_returns_ground_truth(self):
+        env = MisinfoEnv(task_id="task1_detection", seed=42)
+        env.reset()
+        state = env.state()
+        assert state.origin_node_id != ""
+        assert len(state.infected_nodes) > 0
+        assert len(state.causal_tree) > 0
+        assert state.done is False
+
+    def test_close_cleans_up(self):
+        env = MisinfoEnv(task_id="task1_detection", seed=42)
+        env.reset()
         env.close()
-        return final_score
-
-    def test_grader1_score_in_range(self):
-        score = self._run_and_grade("task1_detection")
-        assert 0.0 <= score <= 1.0
-
-    def test_grader2_score_in_range(self):
-        score = self._run_and_grade("task2_tracing")
-        assert 0.0 <= score <= 1.0
-
-    def test_grader3_score_in_range(self):
-        score = self._run_and_grade("task3_containment")
-        assert 0.0 <= score <= 1.0
+        assert env.task is None
+        assert env.grader is None
 
 
-# ─────────────────────────────────────────
-# TEST: NETWORK INTEGRITY
-# ─────────────────────────────────────────
+# ═══════════════════════════════════════
+# END-TO-END TESTS
+# ═══════════════════════════════════════
 
-class TestNetworkIntegrity:
-    @pytest.mark.parametrize("task_id,expected_size", [
-        ("task1_detection", 20),
-        ("task2_tracing", 40),
-        ("task3_containment", 80),
-    ])
-    def test_network_size(self, task_id, expected_size):
-        env = MisinfoEnv(task_id=task_id, seed=SEED)
+class TestEndToEnd:
+    def test_full_task1_episode(self):
+        env = MisinfoEnv(task_id="task1_detection", seed=42)
         obs = env.reset()
-        assert len(obs.network.nodes) == expected_size
-        env.close()
+        step_count = 0
+        while not env.done:
+            target = obs.stream_reports[0] if obs.stream_reports else "node_0"
+            if step_count % 2 == 0:
+                action = Action(action_type=ActionType.inspect, target_node_id=target, confidence=0.5)
+            else:
+                action = Action(action_type=ActionType.quarantine, target_node_id=target, confidence=0.7)
+            obs, reward, done, info = env.step(action)
+            step_count += 1
+            assert -1.0 <= reward.score <= 1.0
+        assert env.done
 
-    def test_all_node_ids_valid_strings(self, env_task1):
-        obs = env_task1.reset()
-        for node_id in obs.network.nodes:
-            assert isinstance(node_id, str)
-            assert len(node_id) > 0
-
-    def test_node_influence_score_in_range(self, env_task1):
-        obs = env_task1.reset()
-        for node in obs.network.nodes.values():
-            assert 0.0 <= node.influence_score <= 1.0
-
-    def test_edge_weights_in_range(self, env_task1):
-        obs = env_task1.reset()
-        for edge in obs.network.edges:
-            assert 0.0 <= edge.weight <= 1.0
-
-    def test_edges_reference_valid_nodes(self, env_task1):
-        obs = env_task1.reset()
-        node_ids = set(obs.network.nodes.keys())
-        for edge in obs.network.edges:
-            assert edge.source in node_ids
-            assert edge.target in node_ids
-
-    def test_initial_infected_nodes_have_infected_status(self, env_task1):
-        env_task1.reset()
-        s = env_task1.state()
-        for nid in s.infected_nodes:
-            node = s.network.nodes[nid]
-            assert node.status == NodeStatus.infected
+    def test_full_task2_episode_with_chain(self):
+        env = MisinfoEnv(task_id="task2_tracing", seed=42)
+        obs = env.reset()
+        # Investigate then submit
+        for _ in range(5):
+            if obs.stream_reports:
+                action = Action(action_type=ActionType.trace, target_node_id=obs.stream_reports[0], confidence=0.5)
+                obs, _, _, _ = env.step(action)
+            if env.done:
+                break
+        if not env.done:
+            origin = env.task.graph.origin_node_id
+            chain = [{"from": origin, "to": "node_0"}]
+            action = Action(action_type=ActionType.submit_causal_chain, confidence=0.6, causal_chain=chain)
+            obs, reward, done, _ = env.step(action)
+            assert done is True

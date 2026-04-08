@@ -1,71 +1,110 @@
-import networkx as nx
+"""
+Grader for Task 2: Origin Tracing & Causal Chain Reconstruction
+Uses Graph Edit Distance for chain accuracy.
+
+Score = (Origin × 0.30) + (ChainAccuracy × 0.30) + (Containment × 0.20)
+      + (Efficiency × 0.10) − (Brier × 0.10)
+"""
+
 from environment.models import Reward
 
+
 class Grader2:
-    """
-    Grader for Task 2: Origin Tracing & Causal Reconstruction
-    Scores the agent based on identifying the true origin 
-    node and the validity of the submitted causal chain.
-    """
-    def grade(self, task, cumulative_penalty: float) -> Reward:
+    def grade(self, task, cumulative_penalty: float, brier_scores: list[float]) -> Reward:
         truth = task.get_ground_truth()
         actual_origin = truth["origin_node"]
         submitted_chain = truth["submitted_chain"]
-        
-        # 1. Did they submit anything?
+        actual_tree = truth["actual_causal_tree"]
+
+        # ── 1. No submission penalty ──
         if not submitted_chain:
             return Reward(
-                score=-1.0,
+                score=-0.5,
                 delta=0.0,
                 done=True,
                 success=False,
-                partial_credits={"brier_calibration_penalty": cumulative_penalty},
+                partial_credits={"reason": "No causal chain submitted"},
                 penalty=cumulative_penalty,
-                feedback="Failed to submit causal chain before episode ended."
+                feedback="Failed to submit causal chain before episode ended.",
             )
-            
-        # 2. Score Origin Node (First node in chain)
-        agent_origin = submitted_chain[0].get("from", "")
-        origin_score = 0.6 if agent_origin == actual_origin else 0.0
 
-        # 3. Score Edge Validity (Graph Edit Distance proxy via Intersection)
-        valid_edges = 0
-        total_submitted_edges = len(submitted_chain)
-        
+        # ── 2. Origin Score (0.30) ──
+        agent_origin = submitted_chain[0].get("from", "") if submitted_chain else ""
+        origin_correct = agent_origin == actual_origin
+        origin_score = 0.30 if origin_correct else 0.0
+
+        # ── 3. Chain Accuracy via edge overlap (GED proxy) (0.30) ──
+        actual_edges = set()
+        for edge in actual_tree:
+            actual_edges.add((edge["from"], edge["to"]))
+
+        submitted_edges = set()
         for edge in submitted_chain:
-            u = edge.get("from")
-            v = edge.get("to")
-            
-            # Check if this edge exists in graph and both nodes are infected
-            if u in task.graph.adjacency and v in task.graph.adjacency[u]:
-                if task.graph.nodes[u].status.value == "infected" and task.graph.nodes[v].status.value == "infected":
-                    valid_edges += 1
-                    
-        edge_score = (valid_edges / max(1, total_submitted_edges)) * 0.4
-        
-        base_score = origin_score + edge_score
-        
-        # Efficiency Bonus (Exponential as per Claude's suggestion)
+            f, t = edge.get("from", ""), edge.get("to", "")
+            if f and t:
+                submitted_edges.add((f, t))
+
+        if not submitted_edges:
+            chain_score = 0.0
+        else:
+            # Precision: what fraction of submitted edges are correct
+            correct_edges = len(submitted_edges & actual_edges)
+            precision = correct_edges / len(submitted_edges)
+            # Recall: what fraction of actual edges were found
+            recall = correct_edges / max(1, len(actual_edges))
+            # F1 score
+            if precision + recall > 0:
+                f1 = 2.0 * (precision * recall) / (precision + recall)
+            else:
+                f1 = 0.0
+            chain_score = f1 * 0.30
+
+        # ── 4. Containment Score (0.20) ──
+        infection_rate = truth["final_infection_rate"]
+        threshold = task.INFECTION_THRESHOLD
+        if infection_rate < threshold:
+            containment_score = 0.20
+        else:
+            # Partial credit: how close to threshold
+            overshoot = min(1.0, (infection_rate - threshold) / threshold)
+            containment_score = 0.20 * max(0, 1.0 - overshoot)
+
+        # ── 5. Efficiency (0.10) ──
         steps_taken = task.step_count
         max_steps = task.MAX_STEPS
-        efficiency_bonus = 0.15 * ((1 - (steps_taken / max_steps)) ** 2)
-        
-        final_score = base_score + efficiency_bonus - cumulative_penalty
-        final_score = max(-1.0, min(1.0, final_score))
-        
-        success = (agent_origin == actual_origin) and (valid_edges == total_submitted_edges)
+        efficiency = 0.10 * ((1 - (steps_taken / max(1, max_steps))) ** 2)
+
+        # ── 6. Brier penalty (0.10) ──
+        avg_brier = sum(brier_scores) / max(1, len(brier_scores)) if brier_scores else 0.0
+        brier_penalty = avg_brier * 0.10
+
+        # ── Composite ──
+        final_score = origin_score + chain_score + containment_score + efficiency - brier_penalty
+        final_score = max(-1.0, min(1.0, round(final_score, 4)))
+
+        success = origin_correct and chain_score >= 0.20
 
         return Reward(
-            score=round(final_score, 4),
+            score=final_score,
             delta=0.0,
             done=True,
             success=success,
             partial_credits={
-                "origin_score": origin_score,
-                "edge_validity_score": round(edge_score, 4),
-                "efficiency_bonus": round(efficiency_bonus, 4),
-                "brier_calibration_penalty": round(cumulative_penalty, 4)
+                "origin_correct": origin_correct,
+                "origin_score": round(origin_score, 4),
+                "chain_accuracy_score": round(chain_score, 4),
+                "chain_precision": round(precision if submitted_edges else 0, 4),
+                "chain_recall": round(recall if submitted_edges else 0, 4),
+                "containment_score": round(containment_score, 4),
+                "efficiency_score": round(efficiency, 4),
+                "brier_penalty": round(brier_penalty, 4),
+                "submitted_edges": len(submitted_edges),
+                "actual_edges": len(actual_edges),
             },
             penalty=cumulative_penalty,
-            feedback=f"Origin guess: {'Correct' if origin_score > 0 else 'Incorrect'}. {valid_edges}/{total_submitted_edges} edges matched valid infected paths."
+            feedback=(
+                f"Origin: {'✓ Correct' if origin_correct else '✗ Wrong'}. "
+                f"Chain: {len(submitted_edges & actual_edges)}/{len(actual_edges)} edges matched. "
+                f"Infection: {infection_rate:.1%}. Brier={avg_brier:.3f}."
+            ),
         )

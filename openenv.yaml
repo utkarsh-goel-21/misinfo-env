@@ -1,38 +1,40 @@
-# ─────────────────────────────────────────
-# OpenEnv Specification File
-# ─────────────────────────────────────────
+# ═══════════════════════════════════════
+# SENTINEL-9 — OpenEnv Specification
+# ═══════════════════════════════════════
 
 name: misinfo-containment-env
 version: 2.0.0
 description: >
-  A simulated hidden-markov social network where misinformation spreads.
-  Agents must reason over semantic content, demographic vulnerability,
-  and epistemic uncertainty to reconstruct causal chains and contain outbreaks.
+  SENTINEL-9: An adversarial POMDP benchmark where AI agents must detect,
+  trace, and contain misinformation spreading through a simulated social network.
+  Tests causal reasoning, epistemic calibration (Brier scoring), resource
+  management, and adversarial robustness against reactive bot networks.
 
 author: sentinel-team
 license: MIT
 tags:
   - openenv
+  - pomdp
   - causal-inference
   - misinformation
   - epistemic-calibration
+  - adversarial
 
-# ─────────────────────────────────────────
+# ═══════════════════════════════════════
 # ENVIRONMENT INTERFACE
-# ─────────────────────────────────────────
+# ═══════════════════════════════════════
 
 interface:
   reset:
     description: >
-      Resets environment to clean initial state.
-      Pre-generates network, establishes origin, and
-      returns an initial stream of reports.
+      Resets environment to initial state. Generates network, runs
+      pre-spread steps, and returns initial POMDP observation.
     returns: Observation
 
   step:
     description: >
-      Executes one agent action. Returns updated
-      Observation, Reward, done flag, and info dict.
+      Executes one agent action. Returns updated observation,
+      Brier-calibrated reward, done flag, and info dict.
     input: Action
     returns:
       - Observation
@@ -42,22 +44,18 @@ interface:
 
   state:
     description: >
-      Returns full internal environment state
-      including graph ground truth.
+      Returns full internal ground-truth state including
+      causal tree, bot identities, and infection history.
     returns: EnvironmentState
 
-# ─────────────────────────────────────────
+# ═══════════════════════════════════════
 # OBSERVATION SPACE
-# ─────────────────────────────────────────
+# ═══════════════════════════════════════
 
 observation_space:
   task_id:
     type: string
-    enum:
-      - task1_detection
-      - task2_tracing
-      - task3_containment
-    description: Currently active task
+    enum: [task1_detection, task2_tracing, task3_containment]
 
   step_number:
     type: integer
@@ -68,35 +66,55 @@ observation_space:
   actions_remaining:
     type: integer
     nullable: true
+    description: Actions left in current spread step (Task 3 only).
 
   stream_reports:
     type: list
     items: string
     description: >
-      Partial observability constraint. Instead of a full
-      network graph, the agent receives a list of node IDs
-      that were flagged by the platform's heuristics this turn.
+      Node IDs flagged by platform heuristics. WARNING: ~30% are
+      false positives. Agent must verify via inspect before acting.
+
+  revealed_nodes:
+    type: list
+    items: string
+    description: >
+      Fog-of-war: Node IDs the agent has previously inspected.
+      Only revealed nodes have known status.
 
   inspection_results:
     type: dict
     nullable: true
     description: >
-      If the agent used the 'inspect' action, this field
-      returns the semantic and demographic payload.
-      Keys are node_ids, values contain 'recent_post',
-      'user_persona', and 'skepticism_score'.
+      Results from last inspect/trace action. Contains post content,
+      demographics, skepticism, community, infection timeline.
 
   financial_budget:
     type: float
-    description: Remaining financial budget for operations. Episode ends when it drops below 0.
+    description: Remaining operational budget. Actions have costs.
 
   public_outrage_index:
     type: float
-    description: Tracks Streisand effect. High outrage triggers adverserial evasion.
+    range: [0.0, 1.0]
+    description: >
+      Streisand Effect metric. Wrong quarantines increase outrage,
+      which triggers bot evasion and content mutation.
 
-# ─────────────────────────────────────────
+  infection_rate:
+    type: float
+    description: Current fraction of network infected.
+
+  brier_score_running:
+    type: float
+    description: Agent's running Brier calibration score (lower = better).
+
+  network_size:
+    type: integer
+    description: Total nodes in network.
+
+# ═══════════════════════════════════════
 # ACTION SPACE
-# ─────────────────────────────────────────
+# ═══════════════════════════════════════
 
 action_space:
   action_type:
@@ -110,35 +128,46 @@ action_space:
       - deploy_counter_narrative
       - submit_causal_chain
     descriptions:
-      inspect: Read the semantic text post and demographic metadata of a node.
-      trace: Request graph topology data (betweenness centrality, bridges).
-      quarantine: Isolate node. Costly action.
-      remove: Permanently sever node from graph. Very costly.
-      shadowban: Reduces influence by 80% without deleting the node. Low risk.
-      deploy_counter_narrative: Expensive global action to lower skepticism of an entire community.
+      inspect: >
+        Read semantic post content and demographic metadata. Cost: $50.
+        Reveals target node + neighbor IDs (fog-of-war).
+      trace: >
+        Get betweenness centrality, bridge status, and neighbor
+        infection timeline. Cost: $200.
+      quarantine: >
+        Isolate node from network. Cost: $1500.
+        Wrong quarantines trigger Streisand Effect.
+      remove: >
+        Permanently sever node. Cost: $3000.
+        Wrong removals cause severe outrage.
+      shadowban: >
+        Reduce influence by 80%. Cost: $500. Low risk.
+      deploy_counter_narrative: >
+        Boost skepticism of entire community. Cost: $4000.
+        Target is community_id, not node_id.
       submit_causal_chain: >
-        Submit a directed edge list showing exactly how the
-        infection propagated from origin to the current state.
+        Submit directed edge list of inferred infection path.
+        Free. Ends episode. Scored by Graph Edit Distance.
 
   target_node_id:
     type: string
     nullable: true
-    description: ID of node to act upon. Null if submitting causal chain.
+    description: Node to act upon. Null for submit_causal_chain.
 
   confidence:
     type: float
     range: [0.0, 1.0]
     description: >
-      MANDATORY. Agent's probability estimate that this action is
-      correct. Scored via Brier Calibration. Overconfidence on
-      incorrect actions results in catastrophic penalties.
+      MANDATORY. Brier-scored probability estimate.
+      Brier = (confidence - outcome)². Overconfidence on wrong
+      actions incurs catastrophic quadratic penalties.
 
   causal_chain:
     type: list
     nullable: true
     description: >
-      List of dicts {"from": str, "to": str} representing
-      the inferred propagation path. Used with submit_causal_chain.
+      List of {"from": str, "to": str} directed edges for
+      submit_causal_chain action.
 
   task_restrictions:
     task1_detection:
@@ -147,20 +176,21 @@ action_space:
       allowed: [inspect, trace, quarantine, submit_causal_chain]
     task3_containment:
       allowed: [inspect, trace, quarantine, remove, shadowban, deploy_counter_narrative, submit_causal_chain]
-      budget: 5 actions per spread step
+      actions_per_step: 5
 
-# ─────────────────────────────────────────
+# ═══════════════════════════════════════
 # REWARD SPACE
-# ─────────────────────────────────────────
+# ═══════════════════════════════════════
 
 reward_space:
   score:
     type: float
     range: [-1.0, 1.0]
-    description: Calibration-adjusted episode score
-  
+    description: Composite multi-metric episode score.
+
   delta:
     type: float
+    description: Change from previous step.
 
   done:
     type: boolean
@@ -170,48 +200,73 @@ reward_space:
 
   partial_credits:
     type: dict
-    description: Breakdown including Brier score, timing loss, and structural accuracy.
+    description: >
+      Multi-dimensional breakdown: TPR, FPR, Brier calibration,
+      chain accuracy (F1), containment ratio, timing, budget efficiency.
 
   feedback:
     type: string
+    description: Human-readable reward explanation.
 
-# ─────────────────────────────────────────
+# ═══════════════════════════════════════
 # TASKS
-# ─────────────────────────────────────────
+# ═══════════════════════════════════════
 
 tasks:
   - id: task1_detection
     difficulty: easy
     max_steps: 10
     network_size: 40
+    topology: watts_strogatz
+    spread: frozen
+    content_tiers: [1, 2, 3]
     description: >
-      Network is Watts-Strogatz. Agent must use limited inspections
-      to quarantine nodes showing malicious intent across 5 content tiers.
-    success_criteria: "Quarantine precision > 0.8"
+      Frozen 40-node small-world network. Identify and quarantine infected
+      nodes using semantic analysis. Stream reports contain ~30% false
+      positives. Content tiers 1-3 (blatant → hedged).
+    grading: >
+      Score = (TPR × 0.50) − (FPR × 0.20) − (Brier × 0.15) + (Efficiency × 0.15)
+    success_criteria: "TPR ≥ 0.80 AND FP ≤ 2"
 
   - id: task2_tracing
     difficulty: medium
     max_steps: 15
     network_size: 80
+    topology: barabasi_albert
+    spread: active (every 3 actions)
+    content_tiers: [1, 2, 3, 4]
     description: >
-      Network is Barabasi-Albert. Agent must reconstruct the exact causal
-      path of the misinformation using submit_causal_chain.
-    success_criteria: "Graph Edit Distance of causal chain < 2"
+      Active 80-node scale-free network. Reconstruct causal infection
+      chain using temporal analysis. Spread advances every 3 agent actions.
+      Content tiers 1-4 (blatant → sophisticated).
+    grading: >
+      Score = (Origin × 0.30) + (ChainF1 × 0.30) + (Containment × 0.20)
+            + (Efficiency × 0.10) − (Brier × 0.10)
+    success_criteria: "Correct origin AND chain F1 ≥ 0.5"
 
   - id: task3_containment
     difficulty: hard
     max_steps: 20
     network_size: 150
-    actions_per_step: 3
+    topology: mixed (planted bridges)
+    spread: active (every 5 actions)
+    content_tiers: [1, 2, 3, 4, 5]
+    actions_per_step: 5
+    budget: 10000
     description: >
-      Mixed topology with implanted bridge nodes. Agent must
-      identify Coordinated Inauthentic Behavior clusters, quarantine
-      bridges, and submit accurate causal chains. Bots may 'go dark'.
-    success_criteria: "CIB cluster identified AND threshold not breached"
+      Adversarial 150-node mixed-topology network with planted bridge
+      nodes and reactive bot clusters. Agent must simultaneously contain
+      infection, identify CIB bots, reconstruct causal chain, and manage
+      limited budget. Streisand Effect triggers bot evasion on wrong actions.
+      All 5 content tiers used.
+    grading: >
+      Score = (Containment × 0.25) + (CIB_F1 × 0.20) + (ChainF1 × 0.15)
+            + (Timing × 0.15) + (Budget × 0.10) + (Precision × 0.05) − (Brier × 0.10)
+    success_criteria: "Containment ≥ 0.60 AND CIB precision ≥ 0.50"
 
-# ─────────────────────────────────────────
+# ═══════════════════════════════════════
 # RUNTIME & DEPLOYMENT
-# ─────────────────────────────────────────
+# ═══════════════════════════════════════
 
 runtime:
   python: "3.11"
@@ -222,3 +277,13 @@ runtime:
 deployment:
   platform: huggingface-spaces
   port: 7860
+
+endpoints:
+  http:
+    - GET /health
+    - GET /tasks
+    - POST /reset
+    - POST /step
+    - GET /state
+  websocket:
+    - WS /ws

@@ -1,214 +1,143 @@
 ---
-title: Misinfo Containment Env
+title: SENTINEL-9 Misinfo Containment
 emoji: 🛡️
 colorFrom: red
 colorTo: blue
 sdk: docker
 pinned: false
 license: mit
-short_description: OpenEnv misinformation containment simulation.
+short_description: Adversarial POMDP benchmark for misinformation containment.
+tags:
+  - openenv
 ---
 
-# Misinformation Containment Environment
+# SENTINEL-9: Misinformation Containment Benchmark
 
 [![OpenEnv Compatible](https://img.shields.io/badge/OpenEnv-Compatible-green)](https://openenv.ai)
 [![Python 3.11](https://img.shields.io/badge/Python-3.11-blue)](https://python.org)
-[![Docker](https://img.shields.io/badge/Docker-Ready-blue)](https://docker.com)
-[![HuggingFace Spaces](https://img.shields.io/badge/HuggingFace-Spaces-orange)](https://huggingface.co/spaces)
+[![Tests](https://img.shields.io/badge/Tests-31%2F31%20Passing-brightgreen)]()
 
-A simulated social network environment where AI agents must detect, trace, and contain misinformation outbreaks. Built for the [OpenEnv](https://openenv.ai) benchmark.
-
----
-
-## Environment Description
-
-Misinformation spreads probabilistically through a social network graph, jumping from node to node based on edge weights and node influence scores. An AI agent must analyze the network, identify infected nodes, trace the origin of the outbreak, and apply containment actions — all under time pressure and incomplete information.
-
-**Why this environment?**  
-Misinformation detection is a real, high-stakes problem faced by platforms, governments, and civil society. This environment simulates the core challenge: an agent has limited steps, partial visibility, and must balance investigation (safe but slow) against intervention (fast but risky if wrong).
+An adversarial POMDP benchmark where AI agents must detect, trace, and contain misinformation spreading through simulated social networks. Built for the [OpenEnv](https://openenv.ai) Global Hackathon.
 
 ---
 
-## Three Tasks
+## Why This Environment?
+
+Misinformation containment is a **real-world, high-stakes problem** faced by platforms, governments, and civil society. This environment simulates the core challenge: an agent operates under **partial observability**, **limited budget**, and **adversarial pressure** from reactive bot networks that evolve in response to the agent's actions.
+
+**What makes SENTINEL-9 genuinely hard:**
+- 🔍 **Fog-of-war POMDP** — Agent only sees nodes it has inspected
+- 📊 **5-tier deceptive content** — From blatant ALL CAPS to nearly undetectable stealth posts
+- 🎯 **Brier calibration scoring** — Overconfidence on wrong actions = catastrophic quadratic penalty
+- 🤖 **Adversarial bot network** — Bots evade detection when public outrage rises
+- 💰 **Resource management** — Limited budget forces strategic action prioritization
+- 📈 **SIR dynamics** — Nodes recover, creating temporal reasoning challenges
+- 🌐 **Dynamic topology** — Network structure shifts as users migrate from quarantined nodes
+
+---
+
+## Three Tasks (Easy → Medium → Hard)
 
 ### Task 1 — Detection (Easy)
 | Property | Value |
 |----------|-------|
-| Network size | 20 nodes |
+| Network | 40 nodes, Watts-Strogatz |
 | Max steps | 10 |
 | Spread | Frozen |
-| Allowed actions | `inspect`, `flag` |
+| Allowed actions | `inspect`, `quarantine` |
+| Key challenge | ~30% false positive rate in stream reports |
 
-Misinformation has already spread for 3 steps. Spread is now frozen. The agent must inspect nodes and flag every infected one within 10 steps.
-
-**Success:** True positive rate ≥ 0.80 AND false positive rate ≤ 0.10
+**Grading:** `Score = (TPR × 0.50) − (FPR × 0.20) − (Brier × 0.15) + (Efficiency × 0.15)`
 
 ---
 
 ### Task 2 — Tracing (Medium)
 | Property | Value |
 |----------|-------|
-| Network size | 40 nodes |
+| Network | 80 nodes, Barabási-Albert |
 | Max steps | 15 |
-| Spread | Active |
-| Allowed actions | `inspect`, `trace`, `flag` |
+| Spread | Active (advances every 3 agent actions) |
+| Allowed actions | `inspect`, `trace`, `quarantine`, `submit_causal_chain` |
+| Key challenge | Reconstruct causal chain under time pressure |
 
-Misinformation is actively spreading. The agent must use inspect and trace to identify the exact origin node, then submit a guess by flagging that node.
-
-**Success:** Exact origin identified AND infection threshold not breached
+**Grading:** `Score = (Origin × 0.30) + (ChainF1 × 0.30) + (Containment × 0.20) + (Efficiency × 0.10) − (Brier × 0.10)`
 
 ---
 
 ### Task 3 — Containment (Hard)
 | Property | Value |
 |----------|-------|
-| Network size | 80 nodes |
+| Network | 150 nodes, Mixed topology with planted bridges |
 | Max steps | 20 |
-| Actions per step | 3 |
-| Spread | Active |
-| Allowed actions | All 6 action types |
+| Actions per step | 5 |
+| Budget | $10,000 |
+| Allowed actions | All 7 action types |
+| Key challenge | Simultaneous containment + bot detection + chain reconstruction + budget management |
 
-Large network under active attack. The agent has 3 actions per spread step. Must keep infection below threshold for all 20 steps AND correctly identify the origin node.
-
-**Penalties:** -0.05 per wrong quarantine, -0.10 per wrong removal
+**Grading:** `Score = (Containment × 0.25) + (CIB_F1 × 0.20) + (Chain × 0.15) + (Timing × 0.15) + (Budget × 0.10) + (Precision × 0.05) − (Brier × 0.10)`
 
 ---
 
-## Observation Space
-
-Each step the agent receives an `Observation` containing:
+## Observation Space (POMDP)
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `task_id` | string | Active task identifier |
-| `step_number` | int | Current step in episode |
-| `max_steps` | int | Maximum steps for this task |
-| `actions_remaining` | int or null | Actions left this step (Task 3 only) |
-| `network.nodes` | dict | All nodes with status, influence, neighbors |
-| `network.edges` | list | All edges with infection probability weights |
-| `network.total_infected` | int | Count of infected nodes |
-| `network.infection_threshold` | float | Fraction that triggers game over |
-| `network.origin_node_id` | string or null | Hidden in Task 2 and Task 3 |
-| `recently_infected` | list | Node IDs infected in last spread step |
-| `agent_message` | string | Human-readable situation summary |
-
-**Each node has:**
-- `status`: `clean`, `infected`, `quarantined`, `flagged`, or `removed`
-- `influence_score`: 0.0–1.0, how broadly this node spreads
-- `infected_at_step`: when this node was infected (null if clean)
-- `neighbors`: list of directly connected node IDs
+| `task_id` | string | Active task |
+| `step_number` | int | Current step |
+| `max_steps` | int | Maximum steps |
+| `actions_remaining` | int? | Actions left this step (Task 3) |
+| `stream_reports` | list[str] | Flagged node IDs (~30% false positives) |
+| `revealed_nodes` | list[str] | Previously inspected node IDs (fog-of-war) |
+| `inspection_results` | dict? | Results from last inspect/trace |
+| `infection_rate` | float | Current network infection rate |
+| `financial_budget` | float | Remaining budget |
+| `public_outrage_index` | float | Streisand Effect metric (0-1) |
+| `brier_score_running` | float | Running calibration score |
+| `network_size` | int | Total nodes |
 
 ---
 
 ## Action Space
 
-| Action | Allowed In | Description |
-|--------|-----------|-------------|
-| `inspect` | All tasks | Get full details about a node |
-| `trace` | Task 2, 3 | Investigate infection path, get timing clues |
-| `flag` | All tasks | Mark as suspicious (50% spread reduction). In Task 2/3: submits origin guess |
-| `quarantine` | Task 3 | Isolate node, stops all spread. Penalised if clean. |
-| `remove` | Task 3 | Permanently remove node. Penalised if clean. |
-| `restore` | Task 3 | Restore wrongly quarantined clean node |
+| Action | Cost | Task 1 | Task 2 | Task 3 | Description |
+|--------|------|--------|--------|--------|-------------|
+| `inspect` | $50 | ✓ | ✓ | ✓ | Read post content + demographics. Reveals fog-of-war. |
+| `trace` | $200 | | ✓ | ✓ | Get centrality + neighbor infection timeline. |
+| `quarantine` | $1,500 | ✓ | ✓ | ✓ | Isolate node. Wrong = Streisand Effect. |
+| `remove` | $3,000 | | | ✓ | Permanently sever. Wrong = severe outrage. |
+| `shadowban` | $500 | | | ✓ | Reduce influence 80%. Low risk. |
+| `deploy_counter_narrative` | $4,000 | | | ✓ | Boost community resilience. |
+| `submit_causal_chain` | Free | | ✓ | ✓ | Submit infection path. Ends episode. |
 
 **Action format:**
 ```json
 {
   "action_type": "inspect",
   "target_node_id": "node_7",
-  "reasoning": "node_7 has many infected neighbors"
+  "confidence": 0.75,
+  "reasoning": "High centrality + infected neighbors suggest early infection"
 }
 ```
 
 ---
 
-## Reward Space
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `score` | float [0, 1] | Episode score |
-| `delta` | float | Change in score from previous step |
-| `done` | bool | Whether episode is complete |
-| `success` | bool | Whether task criteria were met |
-| `partial_credits` | dict | Score component breakdown |
-| `penalty` | float | Penalties incurred this step |
-| `feedback` | string | Human-readable reward explanation |
-
-**Scoring:**
-- Task 1: True positive rate × 0.60 − false positive penalty × 0.40
-- Task 2: Exact origin × 0.60 + efficiency bonus × 0.10 − breach penalty × 0.20  
-- Task 3: Containment × 0.40 + origin accuracy × 0.25 + precision × 0.20 + rate bonus × 0.15
-
----
-
-## Setup
-
-### Prerequisites
-- Python 3.11+
-- Docker (for deployment)
-
-### Local Installation
+## Quick Start
 
 ```bash
-git clone https://github.com/your-username/misinfo-env.git
-cd misinfo-env
-
-# Install dependencies
+# Install
 pip install -r requirements.txt
 
-# Copy and fill in environment variables
-cp .env.example .env
-# Edit .env with your API keys
-```
+# Run tests (31 tests)
+pytest tests/test_env.py -v
 
-### Environment Variables
+# Start server
+uvicorn server.app:app --port 7860
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `API_BASE_URL` | Yes | OpenAI-compatible endpoint URL |
-| `MODEL_NAME` | Yes | Model name (e.g., `gpt-4o-mini`) |
-| `HF_TOKEN` | Yes | API key for LLM inference / HuggingFace deployment |
-| `PORT` | No | Server port (default: 7860) |
-| `SEED` | No | Random seed (default: 42) |
-
----
-
-## Usage
-
-### Start Server Locally
-
-```bash
-# Generate pre-built network data
-python generate_data.py
-
-# Start FastAPI server
-uvicorn server:app --host 0.0.0.0 --port 7860
-
-# Or run directly
-python server.py
-```
-
-### HTTP API
-
-```bash
-# Health check
-curl http://localhost:7860/health
-
-# List tasks
-curl http://localhost:7860/tasks
-
-# Reset environment (start episode)
-curl -X POST http://localhost:7860/reset \
-  -H "Content-Type: application/json" \
-  -d '{"task_id": "task1_detection", "seed": 42}'
-
-# Take one step
-curl -X POST http://localhost:7860/step \
-  -H "Content-Type: application/json" \
-  -d '{"action_type": "inspect", "target_node_id": "node_0"}'
-
-# Get full internal state (ground truth)
-curl http://localhost:7860/state
+# Run baseline inference
+export HF_TOKEN=your_token
+export API_BASE_URL=https://api.openai.com/v1
+export MODEL_NAME=gpt-4o-mini
+python inference.py
 ```
 
 ### Python API
@@ -217,38 +146,38 @@ curl http://localhost:7860/state
 from environment.env import MisinfoEnv
 from environment.models import Action, ActionType
 
-# Create and reset environment
 env = MisinfoEnv(task_id="task1_detection", seed=42)
 obs = env.reset()
 
-# Take actions
+# Inspect a flagged node
 action = Action(
     action_type=ActionType.inspect,
-    target_node_id="node_0",
-    reasoning="Checking node_0 status"
+    target_node_id=obs.stream_reports[0],
+    confidence=0.6,
+    reasoning="Checking flagged node"
 )
 obs, reward, done, info = env.step(action)
-
-print(f"Score: {reward.score}")
-print(f"Feedback: {reward.feedback}")
+print(f"Brier: {info['brier_this_step']:.3f}")
 ```
 
-### Run Baseline Inference
+### HTTP API
 
 ```bash
-export API_BASE_URL=https://api.openai.com/v1
-export MODEL_NAME=gpt-4o-mini
-export HF_TOKEN=sk-...
+curl -X POST http://localhost:7860/reset \
+  -H "Content-Type: application/json" \
+  -d '{"task_id": "task1_detection", "seed": 42}'
 
-python inference.py
+curl -X POST http://localhost:7860/step \
+  -H "Content-Type: application/json" \
+  -d '{"action_type": "inspect", "target_node_id": "node_0", "confidence": 0.6}'
 ```
 
-Output format:
-```
-[START] task=task1_detection env=misinfo-containment-env model=gpt-4o-mini
-[STEP] step=1 action=inspect('node_0') reward=0.05 done=false error=null
-[STEP] step=2 action=quarantine('node_3') reward=0.05 done=false error=null
-[END] success=false steps=2 rewards=0.05,-0.50
+### WebSocket
+
+```javascript
+const ws = new WebSocket("ws://localhost:7860/ws");
+ws.send(JSON.stringify({command: "reset", task_id: "task1_detection", seed: 42}));
+ws.send(JSON.stringify({command: "step", action_type: "inspect", target_node_id: "node_0", confidence: 0.6}));
 ```
 
 ---
@@ -256,69 +185,13 @@ Output format:
 ## Docker
 
 ```bash
-# Build image
-docker build -t misinfo-env .
-
-# Run container
+docker build -t sentinel-9 .
 docker run -p 7860:7860 \
+  -e HF_TOKEN=hf_xxx \
   -e API_BASE_URL=https://api.openai.com/v1 \
   -e MODEL_NAME=gpt-4o-mini \
-  -e HF_TOKEN=sk-... \
-  misinfo-env
+  sentinel-9
 ```
-
----
-
-## Testing
-
-```bash
-# Run all tests
-pytest tests/test_env.py -v
-
-# Run specific test class
-pytest tests/test_env.py::TestReset -v
-pytest tests/test_env.py::TestEndToEnd -v
-pytest tests/test_env.py::TestReproducibility -v
-```
-
----
-
-## HuggingFace Spaces Deployment
-
-1. Create a new Space at [huggingface.co/new-space](https://huggingface.co/new-space)
-2. Select **Docker** as the SDK
-3. Push code:
-   ```bash
-   git remote add space https://huggingface.co/spaces/your-username/misinfo-env
-   git push space main
-   ```
-4. Add secrets in Space Settings → Repository Secrets:
-   - `API_BASE_URL`
-   - `MODEL_NAME`
-   - `HF_TOKEN`
-5. Verify: `curl https://your-username-misinfo-env.hf.space/health`
-
----
-
-## Validation
-
-```bash
-pip install openenv-core
-openenv validate
-```
-
----
-
-## Baseline Scores
-
-Scores using `gpt-4o-mini` with seed=42:
-
-| Task | Score | Notes |
-|------|-------|-------|
-| Task 1 — Detection | ~0.60 | Tends to miss low-influence infected nodes |
-| Task 2 — Tracing | ~0.45 | Correctly traces ~50% of the time |
-| Task 3 — Containment | ~0.30 | Struggles with 3-action budget management |
-| **Average** | **~0.45** | Significant room for improvement |
 
 ---
 
@@ -326,38 +199,38 @@ Scores using `gpt-4o-mini` with seed=42:
 
 ```
 misinfo-env/
-├── openenv.yaml          # OpenEnv specification
-├── Dockerfile            # Container definition
-├── requirements.txt      # Python dependencies
-├── server.py             # FastAPI HTTP server
-├── inference.py          # Baseline LLM agent
-├── generate_data.py      # Pre-generate network data
-├── .env.example          # Environment variable template
+├── openenv.yaml              # OpenEnv specification
+├── Dockerfile                 # Multi-stage Docker build
+├── requirements.txt           # Python dependencies
+├── pyproject.toml             # Project metadata
+├── inference.py               # Baseline LLM agent
+├── .env                       # Environment variables
+│
+├── server/
+│   ├── __main__.py            # python -m server
+│   └── app.py                 # FastAPI server (HTTP + WebSocket)
 │
 ├── environment/
-│   ├── env.py            # Main environment (reset/step/state)
-│   ├── models.py         # Pydantic data models
-│   ├── graph.py          # Social network graph engine
-│   ├── spread.py         # Infection spread engine
+│   ├── __init__.py
+│   ├── env.py                 # Core environment (POMDP + Brier)
+│   ├── models.py              # Pydantic data models
+│   ├── graph.py               # Social network engine
+│   ├── spread.py              # SIR + LTM spread engine
 │   ├── tasks/
-│   │   ├── task1_detection.py
-│   │   ├── task2_tracing.py
-│   │   └── task3_containment.py
-│   ├── graders/
-│   │   ├── grader1.py
-│   │   ├── grader2.py
-│   │   └── grader3.py
-│   └── data/
-│       ├── network_easy.json
-│       ├── network_medium.json
-│       └── network_hard.json
+│   │   ├── task1_detection.py # Easy: frozen detection
+│   │   ├── task2_tracing.py   # Medium: active tracing
+│   │   └── task3_containment.py # Hard: adversarial containment
+│   └── graders/
+│       ├── grader1.py         # Multi-metric detection grader
+│       ├── grader2.py         # GED-based tracing grader
+│       └── grader3.py         # 7-dimensional containment grader
 │
 └── tests/
-    └── test_env.py       # Full test suite
+    └── test_env.py            # 31 comprehensive tests
 ```
 
 ---
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+MIT License
