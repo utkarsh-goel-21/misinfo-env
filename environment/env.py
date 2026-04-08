@@ -374,7 +374,7 @@ class MisinfoEnv:
         threshold = self.task.graph.infection_threshold
         pressure = max(0, infection_rate / threshold - 0.5) * 0.1
 
-        step_score = max(-1.0, min(1.0, base - brier_penalty - pressure))
+        step_score = max(0.01, min(0.99, base - brier_penalty - pressure))
 
         return Reward(
             score=round(step_score, 4),
@@ -392,8 +392,8 @@ class MisinfoEnv:
 
     def _error_reward(self, error: str) -> Reward:
         return Reward(
-            score=-0.1,
-            delta=-0.1,
+            score=0.01,
+            delta=0.0,
             done=False,
             success=False,
             partial_credits={},
