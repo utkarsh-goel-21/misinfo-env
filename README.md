@@ -167,8 +167,7 @@ cp .env.example .env
 |----------|----------|-------------|
 | `API_BASE_URL` | Yes | OpenAI-compatible endpoint URL |
 | `MODEL_NAME` | Yes | Model name (e.g., `gpt-4o-mini`) |
-| `OPENAI_API_KEY` | Yes | API key for LLM inference |
-| `HF_TOKEN` | For deployment | HuggingFace Access Token |
+| `HF_TOKEN` | Yes | API key for LLM inference / HuggingFace deployment |
 | `PORT` | No | Server port (default: 7860) |
 | `SEED` | No | Random seed (default: 42) |
 
@@ -239,17 +238,17 @@ print(f"Feedback: {reward.feedback}")
 ```bash
 export API_BASE_URL=https://api.openai.com/v1
 export MODEL_NAME=gpt-4o-mini
-export OPENAI_API_KEY=sk-...
+export HF_TOKEN=sk-...
 
 python inference.py
 ```
 
 Output format:
 ```
-[START] task1_detection seed=42
-[STEP] step=0 action=inspect target=node_0 reasoning="..."
-[STEP] step=1 action=flag target=node_3 reasoning="..."
-[END] task1_detection score=0.7200 success=False
+[START] task=task1_detection env=misinfo-containment-env model=gpt-4o-mini
+[STEP] step=1 action=inspect('node_0') reward=0.05 done=false error=null
+[STEP] step=2 action=quarantine('node_3') reward=0.05 done=false error=null
+[END] success=false steps=2 rewards=0.05,-0.50
 ```
 
 ---
@@ -264,7 +263,7 @@ docker build -t misinfo-env .
 docker run -p 7860:7860 \
   -e API_BASE_URL=https://api.openai.com/v1 \
   -e MODEL_NAME=gpt-4o-mini \
-  -e OPENAI_API_KEY=sk-... \
+  -e HF_TOKEN=sk-... \
   misinfo-env
 ```
 
@@ -296,7 +295,7 @@ pytest tests/test_env.py::TestReproducibility -v
 4. Add secrets in Space Settings → Repository Secrets:
    - `API_BASE_URL`
    - `MODEL_NAME`
-   - `OPENAI_API_KEY`
+   - `HF_TOKEN`
 5. Verify: `curl https://your-username-misinfo-env.hf.space/health`
 
 ---

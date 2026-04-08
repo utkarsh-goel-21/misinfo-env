@@ -16,7 +16,11 @@ from environment.models import Action, ActionType, Observation
 
 API_BASE_URL   = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME     = os.getenv("MODEL_NAME", "gpt-4o-mini")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", os.getenv("HF_TOKEN", ""))
+HF_TOKEN       = os.getenv("HF_TOKEN")
+
+if HF_TOKEN is None:
+    raise ValueError("HF_TOKEN environment variable is required")
+
 SEED           = int(os.getenv("SEED", "42"))
 
 ENV_NAME = "misinfo-containment-env"
@@ -41,7 +45,7 @@ def emit_step(step: int, action_str: str, reward: float, done: bool, error: str 
 def emit_end(success: bool, steps: int, score: float, rewards: list[float]):
     success_str  = "true" if success else "false"
     rewards_str  = ",".join(f"{r:.2f}" for r in rewards)
-    print(f"[END] success={success_str} steps={steps} score={score:.2f} rewards={rewards_str}", flush=True)
+    print(f"[END] success={success_str} steps={steps} rewards={rewards_str}", flush=True)
 
 # ─────────────────────────────────────────
 # OBSERVATION → TEXT FOR LLM
@@ -186,18 +190,17 @@ def run_task(client: OpenAI, task_id: str) -> tuple[float, bool, int, list[float
         last_error  = str(exc)
         final_score = step_rewards[-1] if step_rewards else 0.0
     finally:
-        env.close()
         emit_end(success=success, steps=step_count, score=final_score, rewards=step_rewards)
 
     return final_score, success, step_count, step_rewards
 
 def main():
-    if not OPENAI_API_KEY:
+    if not HF_TOKEN:
         sys.exit(1)
 
     print(f"[INFO] model={MODEL_NAME} base={API_BASE_URL} seed={SEED}", flush=True)
 
-    client = OpenAI(api_key=OPENAI_API_KEY, base_url=API_BASE_URL)
+    client = OpenAI(api_key=HF_TOKEN, base_url=API_BASE_URL)
     all_scores: list[float] = []
     total_start = time.time()
 
