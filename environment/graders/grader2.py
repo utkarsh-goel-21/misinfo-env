@@ -7,6 +7,7 @@ Score = (Origin × 0.30) + (ChainAccuracy × 0.30) + (Containment × 0.20)
 """
 
 from environment.models import Reward
+from environment.scoring import clamp_openenv_score
 
 
 class Grader2:
@@ -19,7 +20,7 @@ class Grader2:
         # ── 1. No submission penalty ──
         if not submitted_chain:
             return Reward(
-                score=0.01,
+                score=clamp_openenv_score(0.0),
                 delta=0.0,
                 done=True,
                 success=False,
@@ -79,8 +80,9 @@ class Grader2:
         brier_penalty = avg_brier * 0.10
 
         # ── Composite ──
-        final_score = origin_score + chain_score + containment_score + efficiency - brier_penalty
-        final_score = max(0.01, min(0.99, round(final_score, 4)))
+        final_score = clamp_openenv_score(
+            origin_score + chain_score + containment_score + efficiency - brier_penalty
+        )
 
         success = origin_correct and chain_score >= 0.20
 

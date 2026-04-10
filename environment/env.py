@@ -15,6 +15,7 @@ from environment.models import (
     Action, ActionType, EnvironmentState, Observation,
     Reward, TaskID, NodeStatus
 )
+from environment.scoring import clamp_openenv_score
 from environment.tasks.task1_detection import Task1Detection
 from environment.tasks.task2_tracing import Task2Tracing
 from environment.tasks.task3_containment import Task3Containment
@@ -374,10 +375,10 @@ class MisinfoEnv:
         threshold = self.task.graph.infection_threshold
         pressure = max(0, infection_rate / threshold - 0.5) * 0.1
 
-        step_score = max(0.01, min(0.99, base - brier_penalty - pressure))
+        step_score = clamp_openenv_score(base - brier_penalty - pressure)
 
         return Reward(
-            score=round(step_score, 4),
+            score=step_score,
             delta=round(step_score - self.prev_score, 4),
             done=False,
             success=False,
@@ -392,7 +393,7 @@ class MisinfoEnv:
 
     def _error_reward(self, error: str) -> Reward:
         return Reward(
-            score=0.01,
+            score=clamp_openenv_score(0.0),
             delta=0.0,
             done=False,
             success=False,

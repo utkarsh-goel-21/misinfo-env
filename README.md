@@ -15,7 +15,7 @@ tags:
 
 [![OpenEnv Compatible](https://img.shields.io/badge/OpenEnv-Compatible-green)](https://openenv.ai)
 [![Python 3.11](https://img.shields.io/badge/Python-3.11-blue)](https://python.org)
-[![Tests](https://img.shields.io/badge/Tests-31%2F31%20Passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/Tests-34%20Passing-brightgreen)]()
 
 An adversarial POMDP benchmark where AI agents must detect, trace, and contain misinformation spreading through simulated social networks. Built for the [OpenEnv](https://openenv.ai) Global Hackathon.
 
@@ -127,8 +127,8 @@ Misinformation containment is a **real-world, high-stakes problem** faced by pla
 # Install
 pip install -r requirements.txt
 
-# Run tests (31 tests)
-pytest tests/test_env.py -v
+# Run tests
+pytest -q
 
 # Start server
 uvicorn server.app:app --port 7860
@@ -214,6 +214,7 @@ misinfo-env/
 │   ├── __init__.py
 │   ├── env.py                 # Core environment (POMDP + Brier)
 │   ├── models.py              # Pydantic data models
+│   ├── scoring.py             # Strict (0, 1) score helpers
 │   ├── graph.py               # Social network engine
 │   ├── spread.py              # SIR + LTM spread engine
 │   ├── tasks/

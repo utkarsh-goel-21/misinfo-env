@@ -8,6 +8,7 @@ reproducibility, budget, adversarial mechanics, edge cases.
 import pytest
 from environment.env import MisinfoEnv
 from environment.models import Action, ActionType, NodeStatus, TaskID
+from environment.scoring import clamp_openenv_score
 
 
 # ═══════════════════════════════════════
@@ -102,7 +103,8 @@ class TestStep:
         env.reset()
         action = Action(action_type=ActionType.inspect, target_node_id="node_9999", confidence=0.5)
         _, reward, _, info = env.step(action)
-        assert reward.score < 0
+        assert info["error"] == "Node 'node_9999' does not exist in the network."
+        assert 0 < reward.score < 1
 
     def test_step_after_done_raises(self):
         env = MisinfoEnv(task_id="task1_detection", seed=42)
@@ -240,7 +242,13 @@ class TestGraders:
         chain = [{"from": env.task.graph.origin_node_id, "to": "node_1"}]
         action = Action(action_type=ActionType.submit_causal_chain, confidence=0.5, causal_chain=chain)
         _, reward, done, _ = env.step(action)
-        assert -1.0 <= reward.score <= 1.0
+        assert 0 < reward.score < 1
+
+    def test_score_clamp_keeps_scores_strictly_inside_open_interval(self):
+        assert clamp_openenv_score(0.0) == 0.01
+        assert clamp_openenv_score(1.0) == 0.99
+        assert clamp_openenv_score(-5.0) == 0.01
+        assert clamp_openenv_score(7.5) == 0.99
 
 
 # ═══════════════════════════════════════
@@ -360,7 +368,7 @@ class TestEndToEnd:
                 action = Action(action_type=ActionType.quarantine, target_node_id=target, confidence=0.7)
             obs, reward, done, info = env.step(action)
             step_count += 1
-            assert -1.0 <= reward.score <= 1.0
+            assert 0 < reward.score < 1
         assert env.done
 
     def test_full_task2_episode_with_chain(self):

@@ -13,25 +13,24 @@ import json
 import os
 import sys
 import time
+from typing import Optional
 from openai import OpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
 
+from baseline_policy import BaselinePolicy
 from environment.env import MisinfoEnv
 from environment.models import Action, ActionType, Observation
+from environment.scoring import clamp_openenv_score, format_openenv_score
 
 # ═══════════════════════════════════════
 # CONFIGURATION
 # ═══════════════════════════════════════
 
-API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
+API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
-HF_TOKEN = os.getenv("HF_TOKEN")
-
-if not HF_TOKEN:
-    print("[ERROR] HF_TOKEN environment variable is required", flush=True)
-    sys.exit(1)
+HF_TOKEN = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
 
 SEED = int(os.getenv("SEED", "42"))
 ENV_NAME = "misinfo-containment-env"
@@ -49,24 +48,35 @@ def emit_start(task_id: str):
     print(f"[START] task={task_id} env={ENV_NAME} model={MODEL_NAME}", flush=True)
 
 
+def log_stderr(message: str):
+    print(message, file=sys.stderr, flush=True)
+
+
 def emit_step(step: int, action_str: str, reward: float, done: bool, error: str = None):
     done_s = "true" if done else "false"
-    err_s = error if error else "null"
+    err_s = error.replace("\n", " ").replace("\r", " ") if error else "null"
     act_clean = action_str.replace("\n", " ").replace("\r", "")
-    print(f"[STEP] step={step} action={act_clean} reward={reward:.4f} done={done_s} error={err_s}", flush=True)
+    print(
+        f"[STEP] step={step} action={act_clean} reward={format_openenv_score(reward)} "
+        f"done={done_s} error={err_s}",
+        flush=True,
+    )
 
 
 def emit_end(success: bool, steps: int, score: float, rewards: list[float]):
     s = "true" if success else "false"
-    r = ",".join(f"{x:.4f}" for x in rewards)
-    print(f"[END] success={s} steps={steps} rewards={r}", flush=True)
+    r = ",".join(format_openenv_score(x) for x in rewards)
+    print(
+        f"[END] success={s} steps={steps} score={format_openenv_score(score)} rewards={r}",
+        flush=True,
+    )
 
 
 # ═══════════════════════════════════════
 # OBSERVATION → TEXT
 # ═══════════════════════════════════════
 
-def obs_to_text(obs: Observation) -> str:
+def obs_to_text(obs: Observation, policy_summary: str | None = None) -> str:
     parts = [
         f"=== SENTINEL-9 STATUS ===",
         f"Task: {obs.task_id.value}",
@@ -75,6 +85,7 @@ def obs_to_text(obs: Observation) -> str:
         f"Network Size: {obs.network_size} nodes",
         f"Revealed Nodes: {len(obs.revealed_nodes)} / {obs.network_size}",
         f"Running Brier Score: {obs.brier_score_running:.3f}",
+        f"Agent Message: {obs.agent_message}",
     ]
 
     if obs.actions_remaining is not None:
@@ -91,6 +102,9 @@ def obs_to_text(obs: Observation) -> str:
         parts.append(f"\nInspection Results:")
         for node_id, data in obs.inspection_results.items():
             parts.append(f"  {node_id}: {json.dumps(data, indent=2, default=str)}")
+
+    if policy_summary:
+        parts.append(f"\n{policy_summary}")
 
     return "\n".join(parts)
 
@@ -170,8 +184,10 @@ Respond ONLY with valid JSON:
 # LLM INTERFACE
 # ═══════════════════════════════════════
 
-def call_llm(client: OpenAI, messages: list[dict]) -> dict:
+def call_llm(client: Optional[OpenAI], messages: list[dict]) -> dict:
     """Call LLM with full conversation history. Returns parsed JSON."""
+    if client is None:
+        return {}
     for attempt in range(MAX_RETRIES):
         try:
             resp = client.chat.completions.create(
@@ -187,7 +203,7 @@ def call_llm(client: OpenAI, messages: list[dict]) -> dict:
             if attempt < MAX_RETRIES - 1:
                 time.sleep(RETRY_DELAY * (attempt + 1))
             else:
-                print(f"[WARN] LLM call failed after {MAX_RETRIES} attempts: {e}", flush=True)
+                log_stderr(f"[WARN] LLM call failed after {MAX_RETRIES} attempts: {e}")
     # Fallback: safe inspect action
     return {"action_type": "inspect", "target_node_id": "node_0", "confidence": 0.3, "reasoning": "LLM fallback"}
 
@@ -225,27 +241,47 @@ def parse_action(parsed: dict | list, obs: Observation, task_id: str) -> Action:
 
 
 def action_to_str(action: Action) -> str:
-    parts = [action.action_type.value]
-    if action.target_node_id:
-        parts.append(f"({action.target_node_id})")
-    parts.append(f"c={action.confidence:.2f}")
-    return " ".join(parts)
+    target = f"({action.target_node_id})" if action.target_node_id else ""
+    return f"{action.action_type.value}{target} c={action.confidence:.2f}"
+
+
+def choose_action(
+    client: Optional[OpenAI],
+    task_id: str,
+    obs: Observation,
+    policy: BaselinePolicy,
+    messages: list[dict],
+) -> Action:
+    heuristic_action = policy.decide(obs)
+    if heuristic_action is not None:
+        return heuristic_action
+
+    user_text = obs_to_text(obs, policy.summarize())
+    messages.append({"role": "user", "content": user_text})
+
+    if len(messages) > 21:
+        del messages[1:-20]
+
+    parsed = call_llm(client, messages)
+    messages.append({"role": "assistant", "content": json.dumps(parsed)})
+    return parse_action(parsed, obs, task_id)
 
 
 # ═══════════════════════════════════════
 # RUN ONE EPISODE
 # ═══════════════════════════════════════
 
-def run_task(client: OpenAI, task_id: str) -> tuple[float, bool, int, list[float]]:
+def run_task(client: Optional[OpenAI], task_id: str) -> tuple[float, bool, int, list[float]]:
     emit_start(task_id)
 
     step_rewards: list[float] = []
     step_count = 0
-    final_score = 0.0
+    final_score = clamp_openenv_score(0.0)
     success = False
 
     env = MisinfoEnv(task_id=task_id, seed=SEED)
     obs = env.reset()
+    policy = BaselinePolicy(task_id)
 
     # Build conversation history for multi-turn reasoning
     system_prompt = SYSTEM_PROMPTS.get(task_id, SYSTEM_PROMPTS["task1_detection"])
@@ -254,19 +290,9 @@ def run_task(client: OpenAI, task_id: str) -> tuple[float, bool, int, list[float
     try:
         done = False
         while not done:
-            user_text = obs_to_text(obs)
-            messages.append({"role": "user", "content": user_text})
-
-            # Keep conversation manageable (last 10 turns)
-            if len(messages) > 21:
-                messages = [messages[0]] + messages[-20:]
-
-            parsed = call_llm(client, messages)
-
-            # Add LLM response to history
-            messages.append({"role": "assistant", "content": json.dumps(parsed)})
-
-            action = parse_action(parsed, obs, task_id)
+            policy.observe(obs)
+            action = choose_action(client, task_id, obs, policy, messages)
+            policy.memory.note_action(action)
             obs, reward, done, info = env.step(action)
 
             step_count += 1
@@ -281,12 +307,12 @@ def run_task(client: OpenAI, task_id: str) -> tuple[float, bool, int, list[float
             )
 
             if done:
-                final_score = reward.score
+                final_score = clamp_openenv_score(reward.score)
                 success = reward.success
 
     except Exception as exc:
-        print(f"[ERROR] {task_id}: {exc}", flush=True)
-        final_score = step_rewards[-1] if step_rewards else 0.0
+        log_stderr(f"[ERROR] {task_id}: {exc}")
+        final_score = clamp_openenv_score(step_rewards[-1] if step_rewards else 0.0)
 
     emit_end(success=success, steps=step_count, score=final_score, rewards=step_rewards)
     return final_score, success, step_count, step_rewards
@@ -297,7 +323,11 @@ def run_task(client: OpenAI, task_id: str) -> tuple[float, bool, int, list[float
 # ═══════════════════════════════════════
 
 def main():
-    print(f"[INFO] SENTINEL-9 Inference | model={MODEL_NAME} base={API_BASE_URL} seed={SEED}", flush=True)
+    if not HF_TOKEN:
+        log_stderr("[ERROR] HF_TOKEN environment variable is required")
+        sys.exit(1)
+
+    log_stderr(f"[INFO] SENTINEL-9 Inference | model={MODEL_NAME} base={API_BASE_URL} seed={SEED}")
 
     client = OpenAI(api_key=HF_TOKEN, base_url=API_BASE_URL)
     all_scores: list[float] = []
@@ -308,11 +338,13 @@ def main():
         score, success, steps, rewards = run_task(client, task_id)
         elapsed = time.time() - t0
         all_scores.append(score)
-        print(f"[RESULT] {task_id}: score={score:.4f} success={success} steps={steps} time={elapsed:.1f}s", flush=True)
+        log_stderr(
+            f"[RESULT] {task_id}: score={score:.4f} success={success} steps={steps} time={elapsed:.1f}s"
+        )
 
     avg = sum(all_scores) / len(all_scores)
     total = time.time() - total_start
-    print(f"[SUMMARY] avg_score={avg:.4f} total_time={total:.1f}s tasks={len(TASKS)}", flush=True)
+    log_stderr(f"[SUMMARY] avg_score={avg:.4f} total_time={total:.1f}s tasks={len(TASKS)}")
 
 
 if __name__ == "__main__":

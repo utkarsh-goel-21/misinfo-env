@@ -6,6 +6,7 @@ Score = (TPR × 0.50) − (FPR_penalty × 0.20) − (Brier × 0.15) + (Efficienc
 """
 
 from environment.models import Reward, NodeStatus
+from environment.scoring import clamp_openenv_score
 
 
 class Grader1:
@@ -38,8 +39,9 @@ class Grader1:
         efficiency = (max_steps - steps_used) / max_steps if max_steps > 0 else 0.0
 
         # Composite score must be strictly (0, 1) to pass validation
-        score = (tpr * 0.50) - (fpr_penalty * 0.20) - (avg_brier * 0.15) + (efficiency * 0.15)
-        score = max(0.01, min(0.99, round(score, 4)))
+        score = clamp_openenv_score(
+            (tpr * 0.50) - (fpr_penalty * 0.20) - (avg_brier * 0.15) + (efficiency * 0.15)
+        )
 
         success = tpr >= 0.80 and false_positives <= 2
 

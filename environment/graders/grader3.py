@@ -7,6 +7,7 @@ Score = (Containment × 0.25) + (CIB × 0.20) + (Chain × 0.15)
 """
 
 from environment.models import Reward, NodeStatus
+from environment.scoring import clamp_openenv_score
 
 
 class Grader3:
@@ -102,12 +103,11 @@ class Grader3:
 
         # ── Compile ──
         false_quarantine_penalty = clean_quarantined * 0.02
-        final_score = (
+        final_score = clamp_openenv_score(
             containment_score + cib_score + chain_score + timing_score
             + budget_score + precision_score
             - brier_penalty - false_quarantine_penalty
         )
-        final_score = max(0.01, min(0.99, round(final_score, 4)))
 
         success = containment_score >= 0.15 and cib_score >= 0.08
 
