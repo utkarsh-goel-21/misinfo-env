@@ -5,8 +5,8 @@ OpenEnv-compliant inference script that:
 1. Reads API_BASE_URL, MODEL_NAME, API_KEY from environment
 2. Runs all 3 tasks sequentially
 3. Outputs strict [START]/[STEP]/[END] format to stdout
-4. Uses multi-turn conversation history for context
-5. Task-specific strategic prompting
+4. Uses a heuristic baseline reviewed through the injected LLM proxy
+5. Falls back safely if proxy review fails
 """
 
 import json

@@ -15,7 +15,7 @@ tags:
 
 [![OpenEnv Compatible](https://img.shields.io/badge/OpenEnv-Compatible-green)](https://openenv.ai)
 [![Python 3.11](https://img.shields.io/badge/Python-3.11-blue)](https://python.org)
-[![Tests](https://img.shields.io/badge/Tests-34%20Passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/Tests-38%20Passing-brightgreen)]()
 
 An adversarial POMDP benchmark where AI agents must detect, trace, and contain misinformation spreading through simulated social networks. Built for the [OpenEnv](https://openenv.ai) Global Hackathon.
 
@@ -134,9 +134,9 @@ pytest -q
 uvicorn server.app:app --port 7860
 
 # Run baseline inference
-export HF_TOKEN=your_token
-export API_BASE_URL=https://api.openai.com/v1
-export MODEL_NAME=gpt-4o-mini
+export API_KEY=your_proxy_key
+export API_BASE_URL=https://router.huggingface.co/v1
+export MODEL_NAME=your_injected_model
 python inference.py
 ```
 
@@ -187,9 +187,9 @@ ws.send(JSON.stringify({command: "step", action_type: "inspect", target_node_id:
 ```bash
 docker build -t sentinel-9 .
 docker run -p 7860:7860 \
-  -e HF_TOKEN=hf_xxx \
-  -e API_BASE_URL=https://api.openai.com/v1 \
-  -e MODEL_NAME=gpt-4o-mini \
+  -e API_KEY=proxy_key \
+  -e API_BASE_URL=https://router.huggingface.co/v1 \
+  -e MODEL_NAME=model_name \
   sentinel-9
 ```
 
@@ -204,6 +204,7 @@ misinfo-env/
 ├── requirements.txt           # Python dependencies
 ├── pyproject.toml             # Project metadata
 ├── inference.py               # Baseline LLM agent
+├── baseline_policy.py         # Heuristic + proxy-reviewed baseline policy
 ├── .env                       # Environment variables
 │
 ├── server/
@@ -227,7 +228,9 @@ misinfo-env/
 │       └── grader3.py         # 7-dimensional containment grader
 │
 └── tests/
-    └── test_env.py            # 31 comprehensive tests
+    ├── test_env.py            # Environment and grader behavior
+    ├── test_inference.py      # Inference stdout + proxy behavior
+    └── test_baseline_policy.py # Baseline policy heuristics
 ```
 
 ---

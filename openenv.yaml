@@ -147,7 +147,7 @@ action_space:
         Target is community_id, not node_id.
       submit_causal_chain: >
         Submit directed edge list of inferred infection path.
-        Free. Ends episode. Scored by Graph Edit Distance.
+        Free. Ends episode. Scored by origin + chain edge overlap metrics.
 
   target_node_id:
     type: string
