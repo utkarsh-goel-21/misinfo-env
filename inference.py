@@ -2,7 +2,7 @@
 SENTINEL-9 — Baseline Inference Agent
 
 OpenEnv-compliant inference script that:
-1. Reads API_BASE_URL, MODEL_NAME, HF_TOKEN from environment
+1. Reads API_BASE_URL, MODEL_NAME, API_KEY from environment
 2. Runs all 3 tasks sequentially
 3. Outputs strict [START]/[STEP]/[END] format to stdout
 4. Uses multi-turn conversation history for context
@@ -30,7 +30,7 @@ from environment.scoring import clamp_openenv_score, format_openenv_score
 
 API_BASE_URL = os.getenv("API_BASE_URL", "https://router.huggingface.co/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
-HF_TOKEN = os.getenv("HF_TOKEN") or os.getenv("API_KEY")
+API_KEY = os.getenv("API_KEY") or os.getenv("HF_TOKEN")
 
 SEED = int(os.getenv("SEED", "42"))
 ENV_NAME = "misinfo-containment-env"
@@ -245,6 +245,73 @@ def action_to_str(action: Action) -> str:
     return f"{action.action_type.value}{target} c={action.confidence:.2f}"
 
 
+def action_to_payload(action: Action) -> dict:
+    payload = {
+        "action_type": action.action_type.value,
+        "confidence": action.confidence,
+        "reasoning": action.reasoning or "",
+    }
+    if action.target_node_id is not None:
+        payload["target_node_id"] = action.target_node_id
+    if action.causal_chain is not None:
+        payload["causal_chain"] = action.causal_chain
+    return payload
+
+
+def review_heuristic_action(
+    client: Optional[OpenAI],
+    task_id: str,
+    obs: Observation,
+    policy: BaselinePolicy,
+    heuristic_action: Action,
+    messages: list[dict],
+) -> Action:
+    if client is None:
+        return heuristic_action
+
+    review_prompt = (
+        "Review the proposed action for this environment. "
+        "Use the proposed action unless it clearly violates the task rules or confidence is poorly calibrated. "
+        "Return JSON with fields: use_proposed (boolean), confidence (float), reasoning (string). "
+        "If you must replace the action, return a full valid action object instead."
+    )
+    user_text = (
+        f"{obs_to_text(obs, policy.summarize())}\n\n"
+        f"Proposed heuristic action:\n{json.dumps(action_to_payload(heuristic_action), indent=2)}\n\n"
+        f"{review_prompt}"
+    )
+    messages.append({"role": "user", "content": user_text})
+
+    if len(messages) > 21:
+        del messages[1:-20]
+
+    parsed = call_llm(client, messages)
+    messages.append({"role": "assistant", "content": json.dumps(parsed)})
+
+    if isinstance(parsed, dict) and parsed.get("use_proposed", False):
+        confidence = parsed.get("confidence", heuristic_action.confidence)
+        try:
+            confidence = max(0.0, min(1.0, float(confidence)))
+        except (TypeError, ValueError):
+            confidence = heuristic_action.confidence
+        return Action(
+            action_type=heuristic_action.action_type,
+            target_node_id=heuristic_action.target_node_id,
+            confidence=confidence,
+            reasoning=parsed.get("reasoning") or heuristic_action.reasoning,
+            causal_chain=heuristic_action.causal_chain,
+        )
+
+    candidate = parse_action(parsed, obs, task_id)
+    same_type = candidate.action_type == heuristic_action.action_type
+    same_target = candidate.target_node_id == heuristic_action.target_node_id
+    same_chain = candidate.causal_chain == heuristic_action.causal_chain
+    if same_type and same_target and same_chain:
+        return candidate
+
+    return heuristic_action
+
+
 def choose_action(
     client: Optional[OpenAI],
     task_id: str,
@@ -254,7 +321,7 @@ def choose_action(
 ) -> Action:
     heuristic_action = policy.decide(obs)
     if heuristic_action is not None:
-        return heuristic_action
+        return review_heuristic_action(client, task_id, obs, policy, heuristic_action, messages)
 
     user_text = obs_to_text(obs, policy.summarize())
     messages.append({"role": "user", "content": user_text})
@@ -323,13 +390,13 @@ def run_task(client: Optional[OpenAI], task_id: str) -> tuple[float, bool, int, 
 # ═══════════════════════════════════════
 
 def main():
-    if not HF_TOKEN:
-        log_stderr("[ERROR] HF_TOKEN environment variable is required")
+    if not API_KEY:
+        log_stderr("[ERROR] API_KEY environment variable is required")
         sys.exit(1)
 
     log_stderr(f"[INFO] SENTINEL-9 Inference | model={MODEL_NAME} base={API_BASE_URL} seed={SEED}")
 
-    client = OpenAI(api_key=HF_TOKEN, base_url=API_BASE_URL)
+    client = OpenAI(api_key=API_KEY, base_url=API_BASE_URL)
     all_scores: list[float] = []
     total_start = time.time()
 
