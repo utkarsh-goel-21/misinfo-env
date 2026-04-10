@@ -185,7 +185,7 @@ action_space:
 reward_space:
   score:
     type: float
-    range: [-1.0, 1.0]
+    range: [0.01, 0.99]
     description: Composite multi-metric episode score.
 
   delta:

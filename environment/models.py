@@ -215,7 +215,7 @@ class Action(BaseModel):
 # ─────────────────────────────────────────
 
 class Reward(BaseModel):
-    score: float = Field(ge=-1.0, le=1.0)
+    score: float = Field(gt=0.0, lt=1.0)
     delta: float = Field(description="Change in score from previous step")
     done: bool
     success: bool
